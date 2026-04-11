@@ -35,10 +35,8 @@ def register():
         if not data or not data.get('phone'):
             return jsonify({'error': 'phone is required'}), 400
         logging.info(f"Register: {data.get('name')} - {data.get('phone')}")
-        if db is not None:
-            uid = register_user(db, data)
-            return jsonify({'status': 'success', 'user_id': str(uid), 'name': data.get('name', ''), 'phone': data.get('phone')}), 201
-        return jsonify({'status': 'success', 'user_id': 'demo_user', 'name': data.get('name', 'User'), 'phone': data.get('phone')}), 202
+        uid = register_user(db, data)
+        return jsonify({'status': 'success', 'user_id': str(uid), 'name': data.get('name', ''), 'phone': data.get('phone')}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -50,12 +48,11 @@ def login():
         if not phone:
             return jsonify({'error': 'phone is required'}), 400
         logging.info(f"Login: {phone}")
-        if db is not None:
-            user = login_user(db, phone)
-            if user:
-                return jsonify({'status': 'success', 'user_id': str(user.get('_id', 'uid')), 'name': user.get('name', ''), 'phone': phone}), 200
-            return jsonify({'status': 'not_found', 'message': 'Phone not registered'}), 404
-        return jsonify({'status': 'success', 'user_id': 'demo_user', 'name': 'Demo User', 'phone': phone}), 200
+        user = login_user(db, phone)
+        if user:
+            uid = user.get('_id', user.get('phone', 'uid'))
+            return jsonify({'status': 'success', 'user_id': str(uid), 'name': user.get('name', ''), 'phone': phone}), 200
+        return jsonify({'status': 'not_found', 'message': 'Phone not registered'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -68,10 +65,8 @@ def report_incident():
             return jsonify({'error': 'No data provided'}), 400
         data['received_at'] = datetime.utcnow().isoformat()
         logging.info(f"CRASH: User {data.get('userId')} at ({data.get('latitude')}, {data.get('longitude')})")
-        if db is not None:
-            iid = insert_incident(db, data)
-            return jsonify({'status': 'success', 'incident_id': str(iid)}), 201
-        return jsonify({'status': 'warning', 'message': 'Received, DB offline'}), 202
+        iid = insert_incident(db, data)
+        return jsonify({'status': 'success', 'incident_id': str(iid)}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
