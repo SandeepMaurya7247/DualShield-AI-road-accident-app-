@@ -28,6 +28,4 @@ captures/
 # Google Play Services values
 google-services.json
 
-# Backend (Excluded as per "frontend" request)
-# If you want to include the backend, remove the line below:
-backend/
+# Full Stack Repository (Frontend & Backend Included)
