@@ -63,7 +63,16 @@ fun AdvancedHubScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().background(BgDark).padding(16.dp).verticalScroll(rememberScrollState())) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(sentinelBlack)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            TacticalGrid(gridColor = sentinelBlue.copy(alpha = 0.05f))
+            
             AdvancedCard("📱 System Diagnostics", "Service status and permission registry", onNavigateToStatus)
             AdvancedCard("📊 Sensor Telemetry", "High-frequency accel/gyro stream", onNavigateToSensors)
             AdvancedCard("🧠 AI Model Metrics", "Impact heuristics and detect logic", onNavigateToModel)
@@ -87,22 +96,23 @@ fun AdvancedHubScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedCard(title: String, desc: String, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color.White.copy(0.05f))
+    SentinelCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        onClick = onClick
     ) {
-        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextWhite)
                 Text(desc, fontSize = 12.sp, color = TextGray)
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGrayDark)
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = sentinelBlue.copy(alpha = 0.5f))
         }
     }
 }
@@ -122,31 +132,42 @@ fun SystemStatusScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = sentinelBlack,
         topBar = {
             TopAppBar(
                 title = { Text("System Status", fontWeight = FontWeight.Black, color = TextWhite) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp)) {
-            Text("SERVICE REGISTRY", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            StatusRow("Background Monitor", isServiceRunning(com.team404.dualshield.services.SensorMonitoringService::class.java))
-            StatusRow("GPS Tracking Core", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-            StatusRow("Live AI Inference", true)
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("PERMISSIONS", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            StatusRow("Precise Location", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-            StatusRow("Emergency SMS", ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED)
-            StatusRow("Voice Recording", ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-            StatusRow("Direct Dialing", ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED)
+        Box(modifier = Modifier.fillMaxSize()) {
+            TacticalGrid(gridColor = sentinelBlue.copy(alpha = 0.05f))
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp)) {
+                Text("SERVICE REGISTRY", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                SentinelCard {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        StatusRow("Background Monitor", isServiceRunning(com.team404.dualshield.services.SensorMonitoringService::class.java))
+                        StatusRow("GPS Tracking Core", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+                        StatusRow("Live AI Inference", true)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                Text("PERMISSIONS", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                SentinelCard {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        StatusRow("Precise Location", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+                        StatusRow("Emergency SMS", ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED)
+                        StatusRow("Voice Recording", ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                        StatusRow("Direct Dialing", ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED)
+                    }
+                }
+            }
         }
     }
 }
@@ -188,39 +209,39 @@ fun SensorMonitorScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = sentinelBlack,
         topBar = {
             TopAppBar(
                 title = { Text("Sensor Telemetry", fontWeight = FontWeight.Black, color = TextWhite) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
-            Text("ACCELEROMETER (m/s²)", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            SensorCard("X-Axis", accelX, "", Color(0xFF3B82F6))
-            SensorCard("Y-Axis", accelY, "", Color(0xFF10B981))
-            SensorCard("Z-Axis", accelZ, "", Color(0xFFF59E0B))
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("GYROSCOPE (rad/s)", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            SensorCard("Roll", gyroX, "", Color(0xFF8B5CF6))
-            SensorCard("Pitch", gyroY, "", Color(0xFFEC4899))
-            SensorCard("Yaw", gyroZ, "", Color(0xFF06B6D4))
+        Box(modifier = Modifier.fillMaxSize()) {
+            TacticalGrid(gridColor = sentinelBlue.copy(alpha = 0.05f))
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+                Text("ACCELEROMETER (m/s²)", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                SensorCard("X-Axis", accelX, "", sentinelBlue)
+                SensorCard("Y-Axis", accelY, "", sentinelGreen)
+                SensorCard("Z-Axis", accelZ, "", sentinelRed)
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                Text("GYROSCOPE (rad/s)", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                SensorCard("Roll", gyroX, "", sentinelBlue)
+                SensorCard("Pitch", gyroY, "", sentinelGreen)
+                SensorCard("Yaw", gyroZ, "", sentinelRed)
+            }
         }
     }
 }
 
 @Composable
 fun SensorCard(label: String, value: Float, unit: String, color: Color) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color.White.copy(0.03f))
+    SentinelCard(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -232,7 +253,7 @@ fun SensorCard(label: String, value: Float, unit: String, color: Color) {
                 progress = (value.coerceIn(-20f, 20f) + 20f) / 40f,
                 modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
                 color = color,
-                trackColor = Color(0xFF2A2A2E)
+                trackColor = sentinelBlack.copy(0.5f)
             )
         }
     }
@@ -296,18 +317,15 @@ fun HistoryItemCard(item: IncidentItem) {
         sdf.format(Date(item.timestamp))
     } catch (e: Exception) { "Unknown Time" }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color.White.copy(0.05f))
+    SentinelCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(44.dp).background(AlertRedBg, CircleShape),
+                modifier = Modifier.size(44.dp).background(sentinelRed.copy(0.1f), CircleShape).border(1.dp, sentinelRed.copy(0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Warning, contentDescription = null, tint = AlertRedBright, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Warning, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -315,8 +333,8 @@ fun HistoryItemCard(item: IncidentItem) {
                 Text(date, color = TextGray, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("SEV ${item.severityLevel}", color = AlertRedBright, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Text("%.3f, %.3f".format(item.latitude, item.longitude), color = TextGrayDark, fontSize = 10.sp)
+                Text("SEV ${item.severityLevel}", color = sentinelRed, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Text("%.3f, %.3f".format(item.latitude, item.longitude), color = TextGray.copy(0.5f), fontSize = 10.sp)
             }
         }
     }
@@ -327,37 +345,36 @@ fun HistoryItemCard(item: IncidentItem) {
 @Composable
 fun MlModelStatusScreen(onBack: () -> Unit) {
     Scaffold(
-        containerColor = BgDark,
+        containerColor = sentinelBlack,
         topBar = {
             TopAppBar(
                 title = { Text("AI Analytics", fontWeight = FontWeight.Black, color = TextWhite) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
-            Text("HEURISTIC ENGINE", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            DiagnosticStatCard("Detection Threshold", "2.5G Severe Impact")
-            DiagnosticStatCard("Inference Mode", "Streaming Heuristics")
-            DiagnosticStatCard("Feature Extraction", "XYZ-Delta magnitude")
-            DiagnosticStatCard("AI Confidence", "98.4%")
+        Box(modifier = Modifier.fillMaxSize()) {
+            TacticalGrid(gridColor = sentinelGreen.copy(alpha = 0.05f))
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
+                Text("HEURISTIC ENGINE", color = sentinelGreen, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                DiagnosticStatCard("Detection Threshold", "2.5G Severe Impact")
+                DiagnosticStatCard("Inference Mode", "Streaming Heuristics")
+                DiagnosticStatCard("Feature Extraction", "XYZ-Delta magnitude")
+                DiagnosticStatCard("AI Confidence", "98.4%")
 
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("SENSITIVITY TUNING", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CardDark),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Impact Sensitivity: High", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("The AI triggers the SOS protocol when the resultant G-force vector exceeds 2.5G.", color = TextGray, fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(32.dp))
+                Text("SENSITIVITY TUNING", color = sentinelGreen, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                SentinelCard {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("Impact Sensitivity: High", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("The AI triggers the SOS protocol when the resultant G-force vector exceeds 2.5G.", color = TextGray, fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -393,38 +410,35 @@ fun GeofencingManagerScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = sentinelBlack,
         topBar = {
             TopAppBar(
                 title = { Text("Geofence Registry", fontWeight = FontWeight.Black, color = TextWhite) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            TacticalGrid(gridColor = sentinelBlue.copy(alpha = 0.05f))
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = AccentBlueLight)
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = sentinelBlue)
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item {
-                        Text("ACTIVE HIGH-RISK ZONES", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("ACTIVE HIGH-RISK ZONES", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                     items(zones) { zone ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = CardDark),
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
+                        SentinelCard {
                             Column(modifier = Modifier.padding(20.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, contentDescription = null, tint = AlertRedBright, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(zone.name, color = TextWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("LAT: ${zone.lat} • LNG: ${zone.lng}", color = TextGray, fontSize = 11.sp)
-                                Text("RADIUS: ${zone.radius} meters", color = TextGrayDark, fontSize = 11.sp)
+                                Text("RADIUS: ${zone.radius} meters", color = sentinelBlue.copy(0.5f), fontSize = 11.sp)
                             }
                         }
                     }
@@ -441,38 +455,38 @@ fun SosProtocolScreen(onBack: () -> Unit) {
     var testing by remember { mutableStateOf(false) }
     
     Scaffold(
-        containerColor = BgDark,
+        containerColor = sentinelBlack,
         topBar = {
             TopAppBar(
                 title = { Text("SOS Sandbox", fontWeight = FontWeight.Black, color = TextWhite) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(Icons.Default.BugReport, contentDescription = null, tint = AccentBlueLight, modifier = Modifier.size(64.dp))
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("Diagnostic Sandbox", color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text("Use this to test speech prompts and timers without dispatching real SMS alerts to relatives.", color = TextGray, textAlign = TextAlign.Center, fontSize = 13.sp)
-            
-            Spacer(modifier = Modifier.height(48.dp))
-            
-            Button(
-                onClick = { testing = true },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                shape = RoundedCornerShape(100.dp)
-            ) {
-                Text(if (testing) "SANDBOX RUNNING..." else "START SANDBOX TEST", fontWeight = FontWeight.Black)
-            }
-            
-            if (testing) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            TacticalGrid(gridColor = sentinelRed.copy(alpha = 0.05f))
+            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(Icons.Default.BugReport, contentDescription = null, tint = sentinelBlue, modifier = Modifier.size(64.dp))
                 Spacer(modifier = Modifier.height(24.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape), color = AccentGreen)
-                LaunchedEffect(Unit) {
-                    delay(5000)
-                    testing = false
+                Text("Diagnostic Sandbox", color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text("Use this to test speech prompts and timers without dispatching real SMS alerts to relatives.", color = TextGray, textAlign = TextAlign.Center, fontSize = 13.sp)
+                
+                Spacer(modifier = Modifier.height(48.dp))
+                
+                SentinelGradientButton(
+                    text = if (testing) "SANDBOX RUNNING..." else "START SANDBOX TEST",
+                    onClick = { testing = true },
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                )
+                
+                if (testing) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape), color = sentinelGreen, trackColor = sentinelBlack.copy(0.3f))
+                    LaunchedEffect(Unit) {
+                        delay(5000)
+                        testing = false
+                    }
                 }
             }
         }
@@ -484,8 +498,8 @@ fun StatusRow(label: String, active: Boolean) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = TextWhite, fontSize = 14.sp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(modifier = Modifier.size(6.dp).background(if (active) AccentGreen else AlertRed, CircleShape))
-            Text(if (active) "ACTIVE" else "OFF", color = if (active) AccentGreen else AlertRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Box(modifier = Modifier.size(6.dp).background(if (active) sentinelGreen else sentinelRed, CircleShape))
+            Text(if (active) "ACTIVE" else "OFF", color = if (active) sentinelGreen else sentinelRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }
