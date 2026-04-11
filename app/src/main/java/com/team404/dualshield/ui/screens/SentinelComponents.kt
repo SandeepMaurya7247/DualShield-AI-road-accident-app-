@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,8 +27,9 @@ import com.team404.dualshield.ui.theme.*
 fun TacticalGrid(
     modifier: Modifier = Modifier,
     gridSize: Dp = 40.dp,
-    gridColor: Color = Color.White.copy(alpha = 0.03f)
+    gridColor: Color? = null
 ) {
+    val actualGridColor = gridColor ?: MaterialTheme.colorScheme.onBackground.copy(alpha = 0.05f)
     Canvas(modifier = modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
@@ -37,7 +39,7 @@ fun TacticalGrid(
         var x = 0f
         while (x < width) {
             drawLine(
-                color = gridColor,
+                color = actualGridColor,
                 start = Offset(x, 0f),
                 end = Offset(x, height),
                 strokeWidth = 1f
@@ -49,7 +51,7 @@ fun TacticalGrid(
         var y = 0f
         while (y < height) {
             drawLine(
-                color = gridColor,
+                color = actualGridColor,
                 start = Offset(0f, y),
                 end = Offset(width, y),
                 strokeWidth = 1f
@@ -72,12 +74,12 @@ fun SentinelCard(
         modifier = modifier.fillMaxWidth(),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = sentinelCard.copy(alpha = 0.9f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp, 
             Brush.linearGradient(
-                listOf(sentinelBorder, Color.Transparent, sentinelBorder)
+                listOf(MaterialTheme.colorScheme.outline, Color.Transparent, MaterialTheme.colorScheme.outline)
             )
         )
     ) {

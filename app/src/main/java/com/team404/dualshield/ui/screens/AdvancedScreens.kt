@@ -50,16 +50,16 @@ fun AdvancedHubScreen(
     onNavigateToGeofence: () -> Unit
 ) {
     Scaffold(
-        containerColor = BgDark,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Advanced Control", fontWeight = FontWeight.Black, color = TextWhite) },
+                title = { Text("Advanced Control", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite)
+                        Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -67,7 +67,7 @@ fun AdvancedHubScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(sentinelBlack)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -82,14 +82,14 @@ fun AdvancedHubScreen(
             Spacer(modifier = Modifier.height(24.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(0.02f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(0.05f))
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = TextGray, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("These tools are for engineering and diagnostic purposes. Handle with care.", color = TextGray, fontSize = 11.sp)
+                    Text("These tools are for engineering and diagnostic purposes. Handle with care.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 }
             }
         }
@@ -101,21 +101,22 @@ fun AdvancedCard(title: String, desc: String, onClick: () -> Unit) {
     SentinelCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        onClick = onClick
+            .padding(vertical = 4.dp)
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextWhite)
-                Text(desc, fontSize = 12.sp, color = TextGray)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+                Text(desc, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = sentinelBlue.copy(alpha = 0.5f))
         }
     }
 }
+
 
 // ── 1. System Status Screen ──────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,12 +133,12 @@ fun SystemStatusScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = sentinelBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("System Status", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
+                title = { Text("System Status", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -209,12 +210,12 @@ fun SensorMonitorScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = sentinelBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Sensor Telemetry", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
+                title = { Text("Sensor Telemetry", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -245,15 +246,15 @@ fun SensorCard(label: String, value: Float, unit: String, color: Color) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label, color = TextGray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("%.3f %s".format(value, unit), color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("%.3f %s".format(value, unit), color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Black)
             }
             Spacer(modifier = Modifier.height(10.dp))
             LinearProgressIndicator(
                 progress = (value.coerceIn(-20f, 20f) + 20f) / 40f,
                 modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
                 color = color,
-                trackColor = sentinelBlack.copy(0.5f)
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
     }
@@ -280,24 +281,24 @@ fun HistoryScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Incident History", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                title = { Text("Incident History", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize().background(BgDark)) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = AccentBlueLight)
             } else if (incidents.isEmpty()) {
                 Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(Icons.Default.Verified, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(64.dp))
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("System Integrity High", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("No incidents detected by AI Sentinel.", color = TextGray, fontSize = 13.sp)
+                    Text("System Integrity High", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("No incidents detected by AI Sentinel.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -329,12 +330,12 @@ fun HistoryItemCard(item: IncidentItem) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Detected Collision", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(date, color = TextGray, fontSize = 12.sp)
+                Text("Detected Collision", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(date, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("SEV ${item.severityLevel}", color = sentinelRed, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Text("%.3f, %.3f".format(item.latitude, item.longitude), color = TextGray.copy(0.5f), fontSize = 10.sp)
+                Text("%.3f, %.3f".format(item.latitude, item.longitude), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), fontSize = 10.sp)
             }
         }
     }
@@ -345,12 +346,12 @@ fun HistoryItemCard(item: IncidentItem) {
 @Composable
 fun MlModelStatusScreen(onBack: () -> Unit) {
     Scaffold(
-        containerColor = sentinelBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("AI Analytics", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
+                title = { Text("AI Analytics", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -371,9 +372,9 @@ fun MlModelStatusScreen(onBack: () -> Unit) {
                 
                 SentinelCard {
                     Column(modifier = Modifier.padding(20.dp)) {
-                        Text("Impact Sensitivity: High", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("Impact Sensitivity: High", color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("The AI triggers the SOS protocol when the resultant G-force vector exceeds 2.5G.", color = TextGray, fontSize = 12.sp)
+                        Text("The AI triggers the SOS protocol when the resultant G-force vector exceeds 2.5G.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     }
                 }
             }
@@ -384,8 +385,8 @@ fun MlModelStatusScreen(onBack: () -> Unit) {
 @Composable
 fun DiagnosticStatCard(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TextGray, fontSize = 14.sp)
-        Text(value, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -410,12 +411,12 @@ fun GeofencingManagerScreen(onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = sentinelBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Geofence Registry", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
+                title = { Text("Geofence Registry", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -434,10 +435,10 @@ fun GeofencingManagerScreen(onBack: () -> Unit) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Warning, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(zone.name, color = TextWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                    Text(zone.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Black, fontSize = 16.sp)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("LAT: ${zone.lat} • LNG: ${zone.lng}", color = TextGray, fontSize = 11.sp)
+                                Text("LAT: ${zone.lat} • LNG: ${zone.lng}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                                 Text("RADIUS: ${zone.radius} meters", color = sentinelBlue.copy(0.5f), fontSize = 11.sp)
                             }
                         }
@@ -455,12 +456,12 @@ fun SosProtocolScreen(onBack: () -> Unit) {
     var testing by remember { mutableStateOf(false) }
     
     Scaffold(
-        containerColor = sentinelBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("SOS Sandbox", fontWeight = FontWeight.Black, color = TextWhite) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = sentinelBlack)
+                title = { Text("SOS Sandbox", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -469,20 +470,23 @@ fun SosProtocolScreen(onBack: () -> Unit) {
             Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 Icon(Icons.Default.BugReport, contentDescription = null, tint = sentinelBlue, modifier = Modifier.size(64.dp))
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Diagnostic Sandbox", color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                Text("Use this to test speech prompts and timers without dispatching real SMS alerts to relatives.", color = TextGray, textAlign = TextAlign.Center, fontSize = 13.sp)
+                Text("Diagnostic Sandbox", color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text("Use this to test speech prompts and timers without dispatching real SMS alerts to relatives.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, fontSize = 13.sp)
                 
                 Spacer(modifier = Modifier.height(48.dp))
                 
-                SentinelGradientButton(
-                    text = if (testing) "SANDBOX RUNNING..." else "START SANDBOX TEST",
+                Button(
                     onClick = { testing = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                )
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = sentinelBlue),
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text(if (testing) "SANDBOX RUNNING..." else "START SANDBOX TEST", fontWeight = FontWeight.Black)
+                }
                 
                 if (testing) {
                     Spacer(modifier = Modifier.height(24.dp))
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape), color = sentinelGreen, trackColor = sentinelBlack.copy(0.3f))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape), color = sentinelGreen, trackColor = MaterialTheme.colorScheme.surfaceVariant)
                     LaunchedEffect(Unit) {
                         delay(5000)
                         testing = false
@@ -496,7 +500,7 @@ fun SosProtocolScreen(onBack: () -> Unit) {
 @Composable
 fun StatusRow(label: String, active: Boolean) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = TextWhite, fontSize = 14.sp)
+        Text(label, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(modifier = Modifier.size(6.dp).background(if (active) sentinelGreen else sentinelRed, CircleShape))
             Text(if (active) "ACTIVE" else "OFF", color = if (active) sentinelGreen else sentinelRed, fontWeight = FontWeight.Bold, fontSize = 12.sp)

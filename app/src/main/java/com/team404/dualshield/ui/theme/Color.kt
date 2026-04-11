@@ -17,6 +17,13 @@ val sentinelGlowBlue = Color(0xFF60A5FA)
 val sentinelRed = Color(0xFFEF4444)      // Impact Red (Alert)
 val sentinelGlowRed = Color(0xFFF87171)
 
+// Daylight Palette (For dynamic Light Mode)
+val lightBackground = Color(0xFFF1F5F9)  // Slate-50 off-white
+val lightCard = Color(0xFFFFFFFF)        // Pure white cards
+val lightTextPrimary = Color(0xFF0F172A) // Deep slate text
+val lightTextSecondary = Color(0xFF64748B) // Subtle slate text
+val lightBorder = Color(0x1B000000)      // Subtle dark border
+
 // Heritage Bindings (Maintaining compatibility with existing code)
 val BgDark = sentinelDark
 val CardDark = sentinelCard
@@ -33,11 +40,3 @@ val TextWhite = Color(0xFFF8FAFC)
 val TextGray = Color(0xFF94A3B8)
 val TextGrayDark = Color(0xFF475569)
 val TextBlack = Color(0xFF000000)
-
-val SurfaceDark = CardDark
-val TextPrimaryDark = TextWhite
-val TextSecondaryDark = TextGray
-val LightBackground = BgDark 
-val SurfaceLight = CardDark
-val TextPrimaryLight = TextWhite
-val TextSecondaryLight = TextGray

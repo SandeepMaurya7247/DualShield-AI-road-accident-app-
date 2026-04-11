@@ -142,7 +142,7 @@ fun MapScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(sentinelBlack)) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Tactical Background Layer (Optional over map if desired, but map covers most)
         
         if (isGoogleMapsAvailable) {
@@ -190,7 +190,7 @@ fun MapScreen() {
                 Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Radar, contentDescription = null, tint = sentinelBlue, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("TACTICAL MAP OVERLAY", color = TextWhite, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    Text("TACTICAL MAP OVERLAY", color = MaterialTheme.colorScheme.onSurface, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 }
             }
             
@@ -209,13 +209,13 @@ fun MapScreen() {
         }
 
         if (!hasLocationPermission) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.7f)), contentAlignment = Alignment.Center) {
                 SentinelCard(modifier = Modifier.padding(32.dp)) {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.LocationOff, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Location Access Required", color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
-                        Text("Grant location access to visualize your mission coordinates.", color = TextGray, textAlign = TextAlign.Center, fontSize = 14.sp)
+                        Text("Location Access Required", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+                        Text("Grant location access to visualize your mission coordinates.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = { permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
@@ -253,7 +253,7 @@ fun MapScreen() {
 @Composable
 fun DiagnosticRow(label: String, status: String, color: Color) {
     Row(modifier = Modifier.width(200.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TextGray, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Text(status, color = color, fontSize = 8.sp, fontWeight = FontWeight.Black)
     }
 }
@@ -264,8 +264,8 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, share: Boo
         FloatingActionButton(
             onClick = onLocate,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 260.dp).size(52.dp),
-            containerColor = if (gpsReady) AccentBlue else CardDark,
-            contentColor = TextWhite,
+            containerColor = if (gpsReady) AccentBlue else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = CircleShape,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 0.dp)
         ) { Icon(if (gpsReady) Icons.Default.MyLocation else Icons.Default.LocationSearching, contentDescription = null, modifier = Modifier.size(22.dp)) }
@@ -279,15 +279,15 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, share: Boo
             ) {
                 Row(modifier = Modifier.padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(modifier = Modifier.size(48.dp).background(Color.White.copy(0.05f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Speed, contentDescription = null, tint = sentinelGlowBlue) }
+                        Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.outline, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Speed, contentDescription = null, tint = sentinelGlowBlue) }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
-                            Text("VELOCITY", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                            Text("$speed KM/H", color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                            Text("VELOCITY", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            Text("$speed KM/H", color = MaterialTheme.colorScheme.onSurface, fontSize = 28.sp, fontWeight = FontWeight.Black)
                         }
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("SECTOR RISK", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text("SECTOR RISK", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         Text(if (highRisk) "ALPHA - HIGH" else "SECURE", color = if (highRisk) sentinelRed else sentinelGreen, fontWeight = FontWeight.Black, fontSize = 15.sp)
                     }
                 }
@@ -300,22 +300,22 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, share: Boo
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White.copy(0.05f)).padding(vertical = 14.dp), horizontalArrangement = Arrangement.SpaceAround) {
+                    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.background).padding(vertical = 14.dp), horizontalArrangement = Arrangement.SpaceAround) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("LATITUDE", color = TextGrayDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("LATITUDE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             Text(if (lat != null) "%.5f°".format(lat) else "SEARCHING", color = sentinelGlowBlue, fontSize = 16.sp, fontWeight = FontWeight.Black)
                         }
-                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(Color.White.copy(0.05f)))
+                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outline))
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("LONGITUDE", color = TextGrayDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("LONGITUDE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                             Text(if (lng != null) "%.5f°".format(lng) else "SEARCHING", color = sentinelGlowBlue, fontSize = 16.sp, fontWeight = FontWeight.Black)
                         }
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {
-                            Text("SENTINEL UPLINK", color = TextWhite, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            Text("Real-time safety telemetry active", color = TextGray, fontSize = 11.sp)
+                            Text("SENTINEL UPLINK", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text("Real-time safety telemetry active", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                         }
                         Switch(checked = share, onCheckedChange = onShareToggle, colors = SwitchDefaults.colors(checkedTrackColor = sentinelBlue))
                     }

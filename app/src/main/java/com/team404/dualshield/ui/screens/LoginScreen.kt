@@ -68,7 +68,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(sentinelBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Tactical Background Layer
         TacticalGrid()
@@ -127,7 +127,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(64.dp)
-                        .background(sentinelCard, CircleShape)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape)
                         .border(1.dp, Brush.linearGradient(listOf(sentinelBlue, sentinelGreen)), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -144,14 +144,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Text(
                 "DualShield AI",
-                color = TextWhite,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp
             )
             Text(
                 "Intelligent Accident Protection",
-                color = TextGray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
             )
@@ -163,8 +163,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(sentinelCard)
-                    .border(1.dp, sentinelBorder, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -176,7 +176,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                         label = "tabBg"
                     )
                     val textColor by animateColorAsState(
-                        targetValue = if (isSelected) TextWhite else TextGrayDark,
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         animationSpec = tween(300),
                         label = "tabText"
                     )
@@ -199,8 +199,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             // ── Form Fields ───────────────────────────────────────────────
             if (selectedTab == 0) {
                 // LOGIN FORM
-                Text("Welcome back", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-                Text("Sign in to continue protection", color = TextGray, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
+                Text("Welcome back", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                Text("Sign in to continue protection", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(24.dp))
 
                 DsTextField(
@@ -272,8 +272,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             } else {
                 // REGISTER FORM
-                Text("Create Account", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-                Text("Join the Sentinel Network", color = TextGray, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
+                Text("Create Account", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                Text("Join the Sentinel Network", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(24.dp))
 
                 DsTextField(
@@ -309,9 +309,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Divider(modifier = Modifier.weight(1f), color = Color(0xFF2A2A2E))
-                    Text("EMERGENCY CONTACT", color = TextGrayDark, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Divider(modifier = Modifier.weight(1f), color = Color(0xFF2A2A2E))
+                    Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
+                    Text("EMERGENCY CONTACT", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -382,13 +382,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(100.dp))
-                    .background(CardDark)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(Icons.Default.Lock, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(14.dp))
-                Text("End-to-end encrypted  •  Your data stays private", color = TextGrayDark, fontSize = 11.sp)
+                Text("End-to-end encrypted  •  Your data stays private", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -414,7 +414,7 @@ fun DsTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(label, color = TextGrayDark, fontSize = 13.sp) },
+        label = { Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp) },
         leadingIcon = {
             Icon(icon, contentDescription = null, tint = AccentBlueLight, modifier = Modifier.size(20.dp))
         },
@@ -424,7 +424,7 @@ fun DsTextField(
                     Icon(
                         if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                         contentDescription = null,
-                        tint = TextGrayDark,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -434,15 +434,15 @@ fun DsTextField(
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         singleLine = true,
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = CardDark,
-            unfocusedContainerColor = Color(0xFF1A1A1E),
-            focusedTextColor = TextWhite,
-            unfocusedTextColor = TextWhite,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
             cursorColor = AccentBlueLight,
             focusedIndicatorColor = AccentBlue,
             unfocusedIndicatorColor = Color.Transparent,
             focusedLabelColor = AccentBlueLight,
-            unfocusedLabelColor = TextGrayDark
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)
     )
@@ -469,14 +469,14 @@ fun DsButton(
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                color = TextWhite,
+                color = Color.White,
                 modifier = Modifier.size(24.dp),
                 strokeWidth = 2.5.dp
             )
         } else {
             Text(
                 text,
-                color = TextWhite,
+                color = Color.White,
                 fontWeight = FontWeight.Black,
                 fontSize = 15.sp,
                 letterSpacing = 2.sp

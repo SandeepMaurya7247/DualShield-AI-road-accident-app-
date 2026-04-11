@@ -51,9 +51,9 @@ fun DualShieldNavGraph(navController: NavHostController = rememberNavController(
                 )
             }
         },
-        containerColor = BgDark
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             NavHost(navController = navController, startDestination = startDest) {
                 composable("login") {
                     LoginScreen(onLoginSuccess = {
@@ -134,9 +134,9 @@ fun CustomBottomNavigation(
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
-        containerColor = Color(0xFF141416), // BgDark
-        contentColor = TextWhite,
-        tonalElevation = 0.dp,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        tonalElevation = 8.dp,
         modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
     ) {
         NavigationBarItem(
@@ -144,11 +144,11 @@ fun CustomBottomNavigation(
             label = { Text("HOME") },
             selected = currentRoute == "home",
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextWhite,
-                selectedTextColor = TextWhite,
-                unselectedIconColor = TextGrayDark,
-                unselectedTextColor = TextGrayDark,
-                indicatorColor = CardDark
+                selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             onClick = { onNavigate("home") }
         )
@@ -157,11 +157,11 @@ fun CustomBottomNavigation(
             label = { Text("MAP") },
             selected = currentRoute == "map",
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextWhite,
-                selectedTextColor = TextWhite,
-                unselectedIconColor = TextGrayDark,
-                unselectedTextColor = TextGrayDark,
-                indicatorColor = CardDark
+                selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             onClick = { onNavigate("map") }
         )
@@ -170,11 +170,11 @@ fun CustomBottomNavigation(
             label = { Text("CONTACTS") },
             selected = currentRoute == "contacts",
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextWhite,
-                selectedTextColor = TextWhite,
-                unselectedIconColor = TextGrayDark,
-                unselectedTextColor = TextGrayDark,
-                indicatorColor = CardDark
+                selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             onClick = { onNavigate("contacts") }
         )
@@ -183,11 +183,11 @@ fun CustomBottomNavigation(
             label = { Text("SETTINGS") },
             selected = currentRoute == "settings",
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextWhite,
-                selectedTextColor = TextWhite,
-                unselectedIconColor = TextGrayDark,
-                unselectedTextColor = TextGrayDark,
-                indicatorColor = CardDark
+                selectedIconColor = MaterialTheme.colorScheme.onBackground,
+                selectedTextColor = MaterialTheme.colorScheme.onBackground,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
             ),
             onClick = { onNavigate("settings") }
         )

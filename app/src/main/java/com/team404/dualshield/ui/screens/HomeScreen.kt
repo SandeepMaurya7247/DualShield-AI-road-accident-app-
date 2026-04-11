@@ -128,7 +128,7 @@ fun HomeScreen(
     )
 
     Box(
-        modifier = Modifier.fillMaxSize().background(sentinelBlack)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         // Tactical Background Layer
         TacticalGrid()
@@ -150,7 +150,7 @@ fun HomeScreen(
                     Icon(Icons.Default.Shield, contentDescription = null, tint = AccentBlueLight)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text("DualShield AI", color = TextWhite, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
+                        Text("DualShield AI", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
                         if (userName.isNotBlank() && userName != "User")
                             Text("Guardian Active • $userName", color = AccentBlueLight, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
@@ -173,7 +173,7 @@ fun HomeScreen(
                 Surface(
                     modifier = Modifier.size(170.dp),
                     shape = CircleShape,
-                    color = sentinelCard.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.surface,
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp, 
                         Brush.linearGradient(listOf(sentinelBlue, sentinelGreen))
@@ -199,7 +199,7 @@ fun HomeScreen(
                         )
                         Text(
                             "ACTIVE", 
-                            color = TextWhite, 
+                            color = MaterialTheme.colorScheme.onBackground, 
                             fontSize = 28.sp, 
                             fontWeight = FontWeight.Black
                         )
@@ -213,7 +213,7 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(100.dp))
-                    .background(if (aiReady) AccentGreenDark.copy(0.2f) else CardDark)
+                    .background(if (aiReady) AccentGreenDark.copy(0.2f) else MaterialTheme.colorScheme.surfaceVariant)
                     .border(1.dp, if (aiReady) AccentGreen.copy(0.3f) else Color.Transparent, RoundedCornerShape(100.dp))
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -221,13 +221,13 @@ fun HomeScreen(
                 Icon(
                     imageVector = if (aiReady) Icons.Default.GraphicEq else Icons.Default.HourglassEmpty,
                     contentDescription = null,
-                    tint = if (aiReady) AccentGreenBright else TextGray,
+                    tint = if (aiReady) AccentGreenBright else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     if (aiReady) "VOICE SENTINEL READY" else "INITIALIZING AI...",
-                    color = if (aiReady) AccentGreenBright else TextGray,
+                    color = if (aiReady) AccentGreenBright else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
@@ -281,7 +281,7 @@ fun HomeScreen(
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("MISSION LOGS", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Text("MISSION LOGS", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Black)
                         TextButton(onClick = onNavigateToHistory) {
                             Text("HISTORY", color = sentinelGlowBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
@@ -325,7 +325,7 @@ fun BackendStatusChip(online: Boolean?) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(100.dp))
-            .background(CardDark)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -358,9 +358,9 @@ fun StatusCard(
 ) {
     Card(
         modifier = modifier.height(130.dp),
-        colors = CardDefaults.cardColors(containerColor = CardDark),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(24.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.05f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -374,14 +374,14 @@ fun StatusCard(
                 }
             }
             Column {
-                Text(title, color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(title, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
                     if (unit.isEmpty()) {
-                        Text(value, color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
+                        Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
                     } else {
-                        Text(value, color = TextWhite, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                        Text(" $unit", color = TextGray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+                        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                        Text(" $unit", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
                     }
                 }
             }
@@ -396,13 +396,13 @@ fun InsightItem(isPrimary: Boolean, title: String, subtitle: String) {
             modifier = Modifier
                 .width(4.dp)
                 .height(42.dp)
-                .background(if (isPrimary) AccentGreenBright else TextGrayDark, RoundedCornerShape(100))
+                .background(if (isPrimary) AccentGreenBright else MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(100))
         )
         Spacer(modifier = Modifier.width(18.dp))
         Column {
-            Text(title, color = if (isPrimary) TextWhite else TextGray, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(title, color = if (isPrimary) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp, fontWeight = FontWeight.Black)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(subtitle, color = TextGrayDark, fontSize = 12.sp)
+            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
     }
 }
@@ -429,7 +429,7 @@ fun LiveLocationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("GUARDIAN BEACON", color = TextGray, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                    Text("GUARDIAN BEACON", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                     Text(
                         if (hasGps) "LIVE TRACKING" else "ACQUIRING...",
                         color = if (hasGps) sentinelGlowGreen else sentinelGlowRed,
@@ -442,7 +442,7 @@ fun LiveLocationCard(
                     onCheckedChange = onShareToggle,
                     colors = SwitchDefaults.colors(
                         checkedTrackColor = sentinelBlue.copy(0.5f),
-                        checkedThumbColor = TextWhite
+                        checkedThumbColor = MaterialTheme.colorScheme.onBackground
                     )
                 )
             }
@@ -450,17 +450,17 @@ fun LiveLocationCard(
             Spacer(modifier = Modifier.height(24.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(0.2f)).padding(16.dp),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.background).padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 val coordsModifier = Modifier.weight(1f)
                 Column(modifier = coordsModifier, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("LATITUDE", color = TextGrayDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("LATITUDE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     Text(if (lat != null) "%.5f".format(lat) else "——", color = AccentBlueLight, fontSize = 16.sp, fontWeight = FontWeight.Black)
                 }
-                Box(modifier = Modifier.width(1.dp).height(32.dp).background(Color.White.copy(0.05f)))
+                Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outline))
                 Column(modifier = coordsModifier, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("LONGITUDE", color = TextGrayDark, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("LONGITUDE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     Text(if (lng != null) "%.5f".format(lng) else "——", color = AccentBlueLight, fontSize = 16.sp, fontWeight = FontWeight.Black)
                 }
             }

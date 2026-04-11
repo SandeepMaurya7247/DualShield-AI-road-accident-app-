@@ -30,16 +30,16 @@ fun SettingsScreen(
     onNavigateToAdvanced: () -> Unit
 ) {
     Scaffold(
-        containerColor = BgDark,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Black, color = TextWhite) },
+                title = { Text("Settings", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = TextWhite)
+                        Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = BgDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
@@ -53,9 +53,9 @@ fun SettingsScreen(
             // Profile Section
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = CardDark),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.05f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -66,8 +66,8 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
-                        Text(userName, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(userPhone, color = TextGray, fontSize = 14.sp)
+                        Text(userName, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(userPhone, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
                 }
             }
@@ -101,7 +101,7 @@ fun SettingsScreen(
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Text("DualShield AI v1.2.0 • Sentinel Edition", color = TextGrayDark, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("DualShield AI v1.2.0 • Sentinel Edition", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }
@@ -112,13 +112,13 @@ fun SettingsItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: S
         modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(40.dp).background(CardDark, CircleShape), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = AccentBlueLight, modifier = Modifier.size(20.dp))
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = TextGray, fontSize = 12.sp)
+            Text(title, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(desc, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
         Switch(checked = true, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedTrackColor = AccentBlue))
     }

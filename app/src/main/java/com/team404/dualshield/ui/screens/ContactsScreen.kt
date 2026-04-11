@@ -64,7 +64,7 @@ fun ContactsScreen(
     LaunchedEffect(userPhone) { loadContacts() }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(sentinelBlack)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         // Tactical Background Layer
         TacticalGrid()
@@ -79,19 +79,19 @@ fun ContactsScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = TextWhite, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.ChevronLeft, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
                         }
                     }
-                    Text("SENTINEL NETWORK", color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                    Text("SENTINEL NETWORK", color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 }
             },
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = { showAddDialog = true },
                     containerColor = AccentBlue,
-                    contentColor = TextWhite,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = CircleShape,
-                    modifier = Modifier.size(64.dp).border(2.dp, Color.White.copy(0.1f), CircleShape)
+                    modifier = Modifier.size(64.dp).border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Contact", modifier = Modifier.size(32.dp))
                 }
@@ -106,14 +106,14 @@ fun ContactsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                        modifier = Modifier.size(80.dp).background(sentinelCard, CircleShape).border(1.dp, sentinelBlue.copy(0.2f), CircleShape),
+                        modifier = Modifier.size(80.dp).background(MaterialTheme.colorScheme.surface, CircleShape).border(1.dp, sentinelBlue.copy(0.2f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Group, contentDescription = null, tint = sentinelBlue, modifier = Modifier.size(36.dp))
                     }
                     Spacer(modifier = Modifier.height(20.dp))
                     Text("EMERGENCY RELATIVES", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                    Text("Trusted Community", color = TextWhite, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                    Text("Trusted Community", color = MaterialTheme.colorScheme.onBackground, fontSize = 32.sp, fontWeight = FontWeight.Black)
                     
                     if (statusMsg.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -143,10 +143,10 @@ fun ContactsScreen(
                                     modifier = Modifier.fillMaxWidth().padding(40.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Icon(Icons.Default.PersonAddAlt, contentDescription = null, tint = TextGrayDark, modifier = Modifier.size(64.dp))
+                                    Icon(Icons.Default.PersonAddAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(64.dp))
                                     Spacer(modifier = Modifier.height(24.dp))
-                                    Text("Sentinel list is empty", color = TextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    Text("No one is assigned to receive your alerts.", color = TextGray, fontSize = 14.sp, textAlign = TextAlign.Center)
+                                    Text("Sentinel list is empty", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    Text("No one is assigned to receive your alerts.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, textAlign = TextAlign.Center)
                                 }
                             }
                         }
@@ -178,7 +178,7 @@ fun ContactsScreen(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
                                     "Guardians will receive SMS alerts with your real-time GPS location during emergencies.",
-                                    color = TextGray, fontSize = 13.sp, lineHeight = 18.sp
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 18.sp
                                 )
                             }
                         }
@@ -225,8 +225,8 @@ fun ContactCardPremium(name: String, phone: String, relation: String, onDelete: 
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, color = TextWhite, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(phone, color = TextGray, fontSize = 13.sp)
+                Text(name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(phone, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(4.dp))
                 Box(modifier = Modifier.background(sentinelGreen.copy(0.1f), RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                     Text(relation.uppercase(), color = sentinelGreen, fontSize = 9.sp, fontWeight = FontWeight.Black)
@@ -251,22 +251,22 @@ fun AddGuardianDialog(onDismiss: () -> Unit, onSave: (String, String, String) ->
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = BgDark),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(0.1f))
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Add Guardian", color = TextWhite, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text("They will be notified in emergencies.", color = TextGray, fontSize = 13.sp)
+                Text("Add Guardian", color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text("They will be notified in emergencies.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(32.dp))
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Full Name", color = TextGrayDark) },
+                    label = { Text("Full Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentBlue, unfocusedBorderColor = Color.White.copy(0.1f),
-                        focusedTextColor = TextWhite, unfocusedTextColor = TextWhite
+                        focusedBorderColor = AccentBlue, unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                     ),
                     shape = RoundedCornerShape(16.dp)
                 )
@@ -274,12 +274,12 @@ fun AddGuardianDialog(onDismiss: () -> Unit, onSave: (String, String, String) ->
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text("Phone Number", color = TextGrayDark) },
+                    label = { Text("Phone Number", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentBlue, unfocusedBorderColor = Color.White.copy(0.1f),
-                        focusedTextColor = TextWhite, unfocusedTextColor = TextWhite
+                        focusedBorderColor = AccentBlue, unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground, unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                     ),
                     shape = RoundedCornerShape(16.dp)
                 )
@@ -293,8 +293,8 @@ fun AddGuardianDialog(onDismiss: () -> Unit, onSave: (String, String, String) ->
                             label = { Text(r) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = AccentBlue,
-                                selectedLabelColor = TextWhite,
-                                labelColor = TextGray
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
@@ -309,7 +309,7 @@ fun AddGuardianDialog(onDismiss: () -> Unit, onSave: (String, String, String) ->
                 ) { Text("CONFIRM GUARDIAN", fontWeight = FontWeight.Black) }
                 
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                    Text("CANCEL", color = TextGray)
+                    Text("CANCEL", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

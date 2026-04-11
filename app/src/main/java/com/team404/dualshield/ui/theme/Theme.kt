@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -32,15 +33,17 @@ private val LightColorScheme = lightColorScheme(
     primary = AccentGreen,
     secondary = AccentBlue,
     tertiary = AlertRed,
-    background = BgDark, // Using dark theme by default
-    surface = CardDark, // Using dark theme by default
+    background = lightBackground,
+    surface = lightCard,
+    surfaceVariant = Color(0xFFE2E8F0), 
+    outline = lightBorder,
     onPrimary = TextWhite,
     onSecondary = TextWhite,
     onTertiary = TextWhite,
-    onBackground = TextWhite,
-    onSurface = TextWhite
+    onBackground = lightTextPrimary,
+    onSurface = lightTextPrimary,
+    onSurfaceVariant = lightTextSecondary
 )
-
 @Composable
 fun DualShieldTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -52,7 +55,8 @@ fun DualShieldTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        else -> DarkColorScheme // Force dark theme ALWAYS
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
     }
     
     val view = LocalView.current
@@ -60,7 +64,7 @@ fun DualShieldTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
