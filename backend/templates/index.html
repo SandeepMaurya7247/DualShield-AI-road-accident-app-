@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DualShield // Tactical Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --sentinel-black: #080808;
+            --sentinel-blue: #00F0FF;
+            --sentinel-green: #00FF94;
+            --sentinel-red: #FF003C;
+            --grid-color: rgba(0, 240, 255, 0.05);
+        }
+
+        body {
+            background-color: var(--sentinel-black);
+            color: white;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow: hidden;
+        }
+
+        .tactical-grid {
+            background-image: linear-gradient(var(--grid-color) 1px, transparent 1px),
+                              linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+        }
+
+        .scanning-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to bottom, transparent, var(--sentinel-blue), transparent);
+            opacity: 0.1;
+            animation: scan 8s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .glass-hud {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        .neon-glow-blue { box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+        .neon-text-blue { text-shadow: 0 0 10px rgba(0, 240, 255, 0.8); }
+        .neon-text-green { text-shadow: 0 0 10px rgba(0, 255, 148, 0.8); }
+        .neon-text-red { text-shadow: 0 0 10px rgba(255, 0, 60, 0.8); }
+
+        .pulse-live {
+            animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .incident-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .incident-card:hover {
+            background: rgba(0, 240, 255, 0.05);
+            transform: translateX(5px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--sentinel-blue); border-radius: 10px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-6">
+    <div class="tactical-grid"></div>
+    <div class="scanning-line"></div>
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8 border-b border-cyan-900/30 pb-4">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-400/30">
+                <i data-lucide="shield" class="text-cyan-400 w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-tighter neon-text-blue">DUALSHIELD // MISSION CONTROL</h1>
+                <p class="text-[10px] text-cyan-500/60 uppercase tracking-[0.2em]">Sentinel Defense Systems v2.1.0</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-red-500 pulse-live"></div>
+                <span class="text-[10px] font-bold tracking-widest text-red-400 uppercase">SYSTEM LIVE</span>
+            </div>
+            <div class="text-right">
+                <p id="current-time" class="text-xl font-mono text-cyan-400 tracking-tight">00:00:00</p>
+                <p class="text-[10px] text-cyan-600 uppercase">Global Tactical Clock</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
+        <!-- Dashboard Left: Metrics -->
+        <div class="col-span-3 flex flex-col gap-6 overflow-y-auto">
+            <div class="glass-hud rounded-xl p-5 border-l-4 border-l-cyan-400 h-1/3">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xs font-bold text-cyan-500 tracking-widest uppercase">System Integrity</h2>
+                    <i data-lucide="activity" class="text-cyan-400 w-4 h-4"></i>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-cyan-600">PROCESSOR LOAD</span>
+                            <span class="text-cyan-400">24%</span>
+                        </div>
+                        <div class="w-full h-1 bg-cyan-950 rounded-full overflow-hidden">
+                            <div class="bg-cyan-400 h-full" style="width: 24%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-cyan-600">NEURAL MEMORY</span>
+                            <span class="text-cyan-400">1.2 GB / 4.0 GB</span>
+                        </div>
+                        <div class="w-full h-1 bg-cyan-950 rounded-full overflow-hidden">
+                            <div class="bg-cyan-400 h-full" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-cyan-600">DATABASE LATENCY</span>
+                            <span class="text-emerald-400">12 ms</span>
+                        </div>
+                        <div class="w-full h-1 bg-cyan-950 rounded-full overflow-hidden">
+                            <div class="bg-emerald-400 h-full" style="width: 15%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-hud rounded-xl p-5 border-l-4 border-l-emerald-400 flex-1">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xs font-bold text-emerald-500 tracking-widest uppercase">Security Nodes</h2>
+                    <i data-lucide="network" class="text-emerald-400 w-4 h-4"></i>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-2 rounded bg-emerald-500/5 border border-emerald-500/10">
+                        <span class="text-[10px] text-emerald-300">GEO-FENCE ENGINE</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-600/20 text-[8px] text-emerald-400 font-bold border border-emerald-500/30">ACTIVE</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-emerald-500/5 border border-emerald-500/10">
+                        <span class="text-[10px] text-emerald-300">SMS GATEWAY</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-600/20 text-[8px] text-emerald-400 font-bold border border-emerald-500/30">STANDBY</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded bg-emerald-500/5 border border-emerald-500/10">
+                        <span class="text-[10px] text-emerald-300">AI INFERENCE API</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-600/20 text-[8px] text-emerald-400 font-bold border border-emerald-500/30">ONLINE</span>
+                    </div>
+                </div>
+                
+                <div class="mt-8">
+                    <h3 class="text-[10px] text-cyan-700 font-bold tracking-tighter uppercase mb-4">Network Topography</h3>
+                    <div class="h-32 flex items-center justify-center border border-dashed border-cyan-900/30 rounded-lg">
+                        <p class="text-[8px] text-cyan-800 text-center italic">Neural Net visualization initializing...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Center: Incident Ticker -->
+        <div class="col-span-6 flex flex-col gap-4 overflow-hidden">
+            <div class="flex justify-between items-center px-4 py-2 border border-cyan-900/30 bg-cyan-950/20 rounded-lg">
+                <h2 class="text-sm font-bold text-cyan-400 tracking-widest uppercase flex items-center gap-2">
+                    <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                    CRITICAL INCIDENT TICKER
+                </h2>
+                <span id="incident-count" class="px-3 py-1 bg-red-600 text-[10px] font-bold text-white rounded-full neon-glow-red">0 ACTIVE</span>
+            </div>
+            
+            <div id="incident-list" class="flex-1 overflow-y-auto space-y-4 pr-4">
+                <!-- Incidents injected here -->
+                <div class="text-center py-20 text-cyan-900 italic">
+                    <i data-lucide="radar" class="w-12 h-12 mx-auto mb-4 opacity-20 animate-spin-slow"></i>
+                    Scanning for regional disturbances...
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Right: Tactical Map Meta -->
+        <div class="col-span-3 flex flex-col gap-6">
+            <div class="glass-hud rounded-xl p-5 border-l-4 border-l-amber-400 flex-1">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-xs font-bold text-amber-500 tracking-widest uppercase">Safe Zone Registry</h2>
+                    <i data-lucide="map-pin" class="text-amber-400 w-4 h-4"></i>
+                </div>
+                <div id="geofence-list" class="space-y-2 overflow-y-auto max-h-[300px]">
+                    <!-- Geofences injected here -->
+                </div>
+            </div>
+
+            <div class="glass-hud rounded-xl p-4 bg-red-950/10 border-red-500/20">
+                <button class="w-full py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg font-bold tracking-widest transition-all uppercase text-xs shadow-lg shadow-red-900/50">
+                    S.O.S OVERRIDE
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-6 flex justify-between text-[10px] text-cyan-800 tracking-widest uppercase">
+        <p>© 2026 TEAM 404 // DUALSHIELD AI PROTECT</p>
+        <p>SECURE CHANNEL: #7247-SENTINEL</p>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Time Update
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            document.getElementById('current-time').textContent = timeStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // Mock Logic for Incident Generation
+        const incidentList = document.getElementById('incident-list');
+        const countBadge = document.getElementById('incident-count');
+        let count = 0;
+
+        async function fetchIncidents() {
+            try {
+                const response = await fetch('/api/incidents');
+                const data = await response.json();
+                renderIncidents(data);
+            } catch (e) {
+                console.error("Failed to fetch incidents", e);
+            }
+        }
+
+        async function fetchGeofences() {
+            try {
+                const response = await fetch('/api/geofences/accident-zones');
+                const data = await response.json();
+                renderGeofences(data);
+            } catch (e) {
+                console.error("Failed to fetch geofences", e);
+            }
+        }
+
+        function renderIncidents(incidents) {
+            if (incidents.length === 0) {
+                incidentList.innerHTML = `
+                    <div class="text-center py-20 text-cyan-900 italic">
+                        <i data-lucide="shield-check" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+                        Sector Clear. No active incidents.
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            countBadge.textContent = `${incidents.length} REPORTED`;
+            incidentList.innerHTML = incidents.map(inc => `
+                <div class="incident-card glass-hud rounded-lg p-4 flex gap-4 border-r-4 ${inc.severityLevel > 2 ? 'border-r-red-600' : 'border-r-amber-400'}">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-bold text-cyan-400 font-mono">ID: ${inc.id.slice(-6)}</span>
+                            <span class="text-[8px] text-cyan-700">${new Date(inc.timestamp).toLocaleString()}</span>
+                        </div>
+                        <p class="text-sm font-bold text-white tracking-tight uppercase">IMPACT DETECTED // SECTOR ${inc.latitude.toFixed(2)}, ${inc.longitude.toFixed(2)}</p>
+                        <p class="text-[10px] text-cyan-600 uppercase mt-1">Severity Level: ${inc.severityLevel} / 5</p>
+                    </div>
+                    <div class="flex flex-col justify-center items-center gap-2">
+                        <i data-lucide="alert-triangle" class="${inc.severityLevel > 2 ? 'text-red-500' : 'text-amber-400'} w-6 h-6"></i>
+                        <span class="text-[8px] font-bold text-white bg-red-950/30 px-2 py-0.5 rounded">URGENT</span>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderGeofences(zones) {
+            const list = document.getElementById('geofence-list');
+            list.innerHTML = zones.map(zone => `
+                <div class="p-3 bg-amber-500/5 border border-amber-400/10 rounded-lg flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] font-bold text-amber-400 uppercase tracking-tighter">${zone.name}</p>
+                        <p class="text-[8px] text-amber-900 uppercase">RADIUS: ${zone.radius}m</p>
+                    </div>
+                    <i data-lucide="anchor" class="text-amber-800 w-3 h-3"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Initial Data
+        fetchIncidents();
+        fetchGeofences();
+
+        // Auto Refresh
+        setInterval(fetchIncidents, 5000);
+    </script>
+</body>
+</html>

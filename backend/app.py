@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from database import (init_db, insert_incident, register_user, login_user,
                       get_recent_incidents, get_geofences,
@@ -10,6 +10,11 @@ app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 db = init_db()
+
+# ── Mission Control Dashboard ────────────────────────────────────────────────
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
 
 # ── Health ──────────────────────────────────────────────────────────────────
 @app.route('/health', methods=['GET'])
