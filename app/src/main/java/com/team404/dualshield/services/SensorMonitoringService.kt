@@ -27,6 +27,14 @@ class SensorMonitoringService : Service(), SensorEventListener {
     private var accelerometer: Sensor? = null
     private var gyroscope: Sensor? = null
     
+    // ML Streaming state
+    private var currentGyroX = 0f
+    private var currentGyroY = 0f
+    private var currentGyroZ = 0f
+    
+    // We mock speed to 45kmh here unless LocationService provides it, to keep the model fed.
+    private var currentSpeedKmh = 45f
+    
     private lateinit var accidentDetector: AccidentDetector
     private val api = BackendApi.create()
     private val serviceScope = CoroutineScope(Dispatchers.IO)
@@ -95,16 +103,28 @@ class SensorMonitoringService : Service(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            if (it.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                val v = it.values
-                val magnitude = Math.sqrt((v[0]*v[0] + v[1]*v[1] + v[2]*v[2]).toDouble())
-                val gForce = magnitude / SensorManager.GRAVITY_EARTH
-                
-                if (gForce > 2.5) { // Impact threshold matching AccidentDetector
-                    if (accidentDetector.analyzeCrashData(it.values)) {
-                        triggerEmergencyProtocol()
-                    }
+        event ?: return
+
+        when (event.sensor.type) {
+            Sensor.TYPE_GYROSCOPE -> {
+                currentGyroX = event.values[0]
+                currentGyroY = event.values[1]
+                currentGyroZ = event.values[2]
+            }
+            Sensor.TYPE_ACCELEROMETER -> {
+                val accX = event.values[0]
+                val accY = event.values[1]
+                val accZ = event.values[2]
+
+                // Stream into the TFLite 1D CNN pipeline
+                val isCrash = accidentDetector.processSensorData(
+                    accX, accY, accZ,
+                    currentGyroX, currentGyroY, currentGyroZ,
+                    currentSpeedKmh
+                )
+
+                if (isCrash) {
+                    triggerEmergencyProtocol()
                 }
             }
         }

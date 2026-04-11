@@ -42,6 +42,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    
+    // Avoid compressing the TFLite file to prevent load errors
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -72,4 +77,7 @@ dependencies {
     // Play Services Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    
+    // Play Services TFLite (Bypasses 16KB alignment issues)
+    implementation("com.google.android.gms:play-services-tflite-java:16.4.0")
 }
