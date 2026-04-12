@@ -44,7 +44,15 @@ import com.team404.dualshield.api.Zone
 import com.team404.dualshield.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.google.android.gms.maps.model.PolylineOptions
 
+@androidx.compose.ui.ExperimentalComposeUiApi
 @SuppressLint("MissingPermission", "SetJavaScriptEnabled")
 @Composable
 fun MapScreen() {
@@ -55,6 +63,10 @@ fun MapScreen() {
     // ── States ─────────────────────────────────────────────────────────────
     var userLat by remember { mutableStateOf<Double?>(null) }
     var userLng by remember { mutableStateOf<Double?>(null) }
+    var currentAddress by remember { mutableStateOf<String?>(null) }
+    var destinationText by remember { mutableStateOf("") }
+    var destinationLatLng by remember { mutableStateOf<LatLng?>(null) }
+    var routePoints by remember { mutableStateOf<List<LatLng>?>(null) }
     var speedKmh by remember { mutableStateOf(0) }
     var isHighRisk by remember { mutableStateOf(false) }
     var shareEnabled by remember { mutableStateOf(true) }
@@ -72,9 +84,86 @@ fun MapScreen() {
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+    val geocoder = remember { android.location.Geocoder(context, java.util.Locale.getDefault()) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(28.6139, 77.2090), 12f)
     }
+
+    val onSearchDestination = {
+        if (destinationText.isNotBlank()) {
+            scope.launch {
+                keyboardController?.hide()
+                try {
+                    val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+                    val key = ai.metaData.getString("com.google.android.geo.API_KEY")
+                    val query = java.net.URLEncoder.encode(destinationText, "UTF-8")
+                    val geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=$query&key=$key"
+                    
+                    val target = withContext(Dispatchers.IO) {
+                        try {
+                            val response = java.net.URL(geocodeUrl).readText()
+                            val json = org.json.JSONObject(response)
+                            val results = json.getJSONArray("results")
+                            if (results.length() > 0) {
+                                val loc = results.getJSONObject(0).getJSONObject("geometry").getJSONObject("location")
+                                LatLng(loc.getDouble("lat"), loc.getDouble("lng"))
+                            } else null
+                        } catch (e: Exception) { null }
+                    }
+
+                    if (target != null) {
+                        destinationLatLng = target
+                        cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, 14f))
+
+                        if (userLat != null && userLng != null) {
+                           withContext(Dispatchers.IO) {
+                               try {
+                                   val urlString = "https://maps.googleapis.com/maps/api/directions/json?origin=${userLat},${userLng}&destination=${target.latitude},${target.longitude}&key=$key"
+                                   val response = java.net.URL(urlString).readText()
+                                   val json = org.json.JSONObject(response)
+                                   val routes = json.getJSONArray("routes")
+                                   if (routes.length() > 0) {
+                                       val polyline = routes.getJSONObject(0).getJSONObject("overview_polyline").getString("points")
+                                       routePoints = decodePolyline(polyline)
+                                   }
+                               } catch (e: Exception) {
+                                   e.printStackTrace()
+                               }
+                           }
+                        }
+                    }
+                } catch(e:Exception){}
+            }
+        }
+    }
+
+    LaunchedEffect(userLat, userLng) {
+        if (userLat != null && userLng != null) {
+            delay(3000L) // debounce
+            try {
+                val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
+                val key = ai.metaData.getString("com.google.android.geo.API_KEY")
+                val geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=${userLat!!},${userLng!!}&key=$key"
+                
+                val address = withContext(Dispatchers.IO) {
+                    try {
+                        val response = java.net.URL(geocodeUrl).readText()
+                        val json = org.json.JSONObject(response)
+                        val results = json.getJSONArray("results")
+                        if (results.length() > 0) {
+                            results.getJSONObject(0).getString("formatted_address")
+                        } else null
+                    } catch (e: Exception) { null }
+                }
+                if (address != null) {
+                    currentAddress = address
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -115,11 +204,16 @@ fun MapScreen() {
 
     DisposableEffect(hasLocationPermission) {
         val locationCallback = object : LocationCallback() {
+            var isFirstUpdate = true
             override fun onLocationResult(result: LocationResult) {
                 val location = result.lastLocation ?: return
                 userLat = location.latitude; userLng = location.longitude
                 speedKmh = (location.speed * 3.6).toInt().coerceAtLeast(0)
                 gpsReady = true
+                if (isFirstUpdate) {
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(location.latitude, location.longitude), 15f)
+                    isFirstUpdate = false
+                }
                 if (!isGoogleMapsAvailable) {
                     webViewRef?.evaluateJavascript("updateLocation(${location.latitude}, ${location.longitude})", null)
                 }
@@ -157,7 +251,16 @@ fun MapScreen() {
                 uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
             ) {
                 userLat?.let { lat -> userLng?.let { lng ->
-                    Marker(state = MarkerState(LatLng(lat, lng)), icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    Marker(state = MarkerState(LatLng(lat, lng)), title = "You", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    
+                    destinationLatLng?.let { target ->
+                        Marker(state = MarkerState(target), title = "Destination", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                        if (routePoints != null && routePoints!!.isNotEmpty()) {
+                            Polyline(points = routePoints!!, color = sentinelGlowBlue, width = 12f)
+                        } else {
+                            Polyline(points = listOf(LatLng(lat, lng), target), color = sentinelGlowGreen, width = 8f)
+                        }
+                    }
                 } }
                 zones.forEach { zone ->
                     Circle(center = LatLng(zone.lat, zone.lng), radius = zone.radius.toDouble(), fillColor = Color(0x33EF4444), strokeColor = Color(0xFFEF4444), strokeWidth = 2f)
@@ -181,8 +284,36 @@ fun MapScreen() {
             )
         }
 
-        // ── TOP DIAGNOSTICS (Sentinel Style) ───────────────────────────────
+        // ── TOP DIAGNOSTICS & SEARCH ─────────────────────────────────────────
         Column(modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp)) {
+            OutlinedTextField(
+                value = destinationText,
+                onValueChange = { destinationText = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                placeholder = { Text("Where to?", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.8f)) },
+                leadingIcon = { Icon(Icons.Default.Search, tint = sentinelBlue, contentDescription = null) },
+                trailingIcon = {
+                   if (destinationText.isNotEmpty()) {
+                        IconButton(onClick = { 
+                            destinationText = ""
+                            destinationLatLng = null
+                        }) { Icon(Icons.Default.Clear, tint = sentinelRed, contentDescription = null) }
+                   }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearchDestination() }),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = sentinelBlue,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha=0.9f)
+                )
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
             SentinelCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(12.dp)
@@ -234,6 +365,7 @@ fun MapScreen() {
             highRisk = isHighRisk,
             lat = userLat,
             lng = userLng,
+            currentAddress = currentAddress,
             share = shareEnabled,
             onShareToggle = { shareEnabled = it },
             gpsReady = gpsReady,
@@ -259,7 +391,7 @@ fun DiagnosticRow(label: String, status: String, color: Color) {
 }
 
 @Composable
-fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, share: Boolean, onShareToggle: (Boolean) -> Unit, gpsReady: Boolean, onLocate: () -> Unit) {
+fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, currentAddress: String?, share: Boolean, onShareToggle: (Boolean) -> Unit, gpsReady: Boolean, onLocate: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         FloatingActionButton(
             onClick = onLocate,
@@ -300,6 +432,10 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, share: Boo
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
+                    Text("CURRENT LOCATION", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(currentAddress ?: "Acquiring satellite lock...", color = sentinelGlowBlue, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.background).padding(vertical = 14.dp), horizontalArrangement = Arrangement.SpaceAround) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("LATITUDE", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -383,4 +519,36 @@ object MapTheme {
           { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#000000" } ] }
         ]
     """.trimIndent()
+}
+
+private fun decodePolyline(encoded: String): List<LatLng> {
+    val poly = ArrayList<LatLng>()
+    var index = 0
+    val len = encoded.length
+    var lat = 0
+    var lng = 0
+    while (index < len) {
+        var b: Int
+        var shift = 0
+        var result = 0
+        do {
+            b = encoded[index++].code - 63
+            result = result or (b and 0x1f shl shift)
+            shift += 5
+        } while (b >= 0x20)
+        val dlat = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+        lat += dlat
+        shift = 0
+        result = 0
+        do {
+            b = encoded[index++].code - 63
+            result = result or (b and 0x1f shl shift)
+            shift += 5
+        } while (b >= 0x20)
+        val dlng = if (result and 1 != 0) (result shr 1).inv() else result shr 1
+        lng += dlng
+        val p = LatLng(lat.toDouble() / 1E5, lng.toDouble() / 1E5)
+        poly.add(p)
+    }
+    return poly
 }

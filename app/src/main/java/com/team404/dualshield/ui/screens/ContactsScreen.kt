@@ -38,6 +38,7 @@ fun ContactsScreen(
 ) {
     val api = remember { BackendApi.create() }
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var contacts by remember { mutableStateOf<List<ContactItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -51,10 +52,18 @@ fun ContactsScreen(
             try {
                 val resp = api.getContacts(userPhone)
                 if (resp.isSuccessful) {
-                    contacts = resp.body() ?: emptyList()
+                    val list = resp.body() ?: emptyList()
+                    contacts = list
+                    com.team404.dualshield.api.UserSession.saveContactsLocal(context, com.google.gson.Gson().toJson(list))
+                } else {
+                    val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
+                    val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
+                    contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
                 }
             } catch (e: Exception) {
-                contacts = emptyList()
+                val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
+                val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
+                contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
             } finally {
                 isLoading = false
             }
@@ -192,12 +201,21 @@ fun ContactsScreen(
                 onDismiss = { showAddDialog = false },
                 onSave = { name, phone, relation ->
                     scope.launch {
+                        val newContact = ContactItem(name, phone, relation)
                         try {
-                            api.addContact(userPhone, ContactRequest(name, phone, relation))
-                            loadContacts()
-                            statusMsg = "New guardian added!"
+                            val response = api.addContact(userPhone, ContactRequest(name, phone, relation))
+                            if (response.isSuccessful) {
+                                loadContacts()
+                                statusMsg = "New guardian added!"
+                            } else {
+                                contacts = (contacts + newContact).distinctBy { it.contact_phone }
+                                com.team404.dualshield.api.UserSession.saveContactsLocal(context, com.google.gson.Gson().toJson(contacts))
+                                statusMsg = "Offline: Added locally"
+                            }
                         } catch (e: Exception) {
-                            statusMsg = "Added to local cache"
+                            contacts = (contacts + newContact).distinctBy { it.contact_phone }
+                            com.team404.dualshield.api.UserSession.saveContactsLocal(context, com.google.gson.Gson().toJson(contacts))
+                            statusMsg = "Offline: Added locally"
                         }
                         showAddDialog = false
                     }

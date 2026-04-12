@@ -38,6 +38,9 @@ class SensorMonitoringService : Service(), SensorEventListener {
     private lateinit var accidentDetector: AccidentDetector
     private val api = BackendApi.create()
     private val serviceScope = CoroutineScope(Dispatchers.IO)
+    
+    // Prevent multiple SOS triggers firing in rapid succession
+    private var sosActive = false
 
     override fun onCreate() {
         super.onCreate()
@@ -123,8 +126,14 @@ class SensorMonitoringService : Service(), SensorEventListener {
                     currentSpeedKmh
                 )
 
-                if (isCrash) {
+                if (isCrash && !sosActive) {
+                    sosActive = true
                     triggerEmergencyProtocol()
+                    // Reset flag after 35 seconds (slightly longer than AccidentDetector cooldown)
+                    serviceScope.launch {
+                        kotlinx.coroutines.delay(35_000L)
+                        sosActive = false
+                    }
                 }
             }
         }

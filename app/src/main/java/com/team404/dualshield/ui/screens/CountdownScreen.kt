@@ -103,12 +103,18 @@ fun CountdownScreen(
                 val response = api.getContacts(userPhone)
                 if (response.isSuccessful) {
                     contacts = response.body() ?: emptyList()
-                    Log.d("CountdownScreen", "Found ${contacts.size} emergency contacts")
+                    Log.d("CountdownScreen", "Found ${contacts.size} emergency contacts from server")
                 } else {
-                    Log.e("CountdownScreen", "Failed to fetch contacts: ${response.code()}")
+                    val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
+                    val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
+                    contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
+                    Log.d("CountdownScreen", "Fallback to local: ${contacts.size} contacts")
                 }
             } catch (e: Exception) {
-                Log.e("CountdownScreen", "Error fetching contacts: ${e.message}")
+                val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
+                val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
+                contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
+                Log.e("CountdownScreen", "Error fetching contacts, using local: ${contacts.size} contacts")
             }
         } else {
             Log.w("CountdownScreen", "No user phone provided, cannot fetch contacts!")
@@ -198,19 +204,19 @@ fun CountdownScreen(
                 // 3. Wait for 5 seconds as requested by user
                 delay(5000L)
 
-                // 4. Trigger automated Phone Call to Primary Contact
+                // 4. Trigger automated Phone Call
                 val primaryContact = contacts.firstOrNull()
-                if (primaryContact != null) {
-                    val callIntent = Intent(Intent.ACTION_CALL).apply {
-                        data = Uri.parse("tel:${primaryContact.contact_phone}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    try { 
-                        context.startActivity(callIntent) 
-                        Log.d("SOS_Dispatch", "Initiating Call to ${primaryContact.contact_phone}")
-                    } catch (e: Exception) {
-                        Log.e("SOS_Dispatch", "Call failed: ${e.message}")
-                    }
+                val emergencyNumber = if (primaryContact != null && primaryContact.contact_phone.isNotBlank()) primaryContact.contact_phone else "112"
+                
+                val callIntent = Intent(Intent.ACTION_CALL).apply {
+                    data = Uri.parse("tel:$emergencyNumber")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                try { 
+                    context.startActivity(callIntent) 
+                    Log.d("SOS_Dispatch", "Initiating Call to $emergencyNumber")
+                } catch (e: Exception) {
+                    Log.e("SOS_Dispatch", "Call failed: ${e.message}")
                 }
 
                 assistantManager.stop()

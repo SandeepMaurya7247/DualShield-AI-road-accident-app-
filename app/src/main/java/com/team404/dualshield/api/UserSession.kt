@@ -38,7 +38,17 @@ object UserSession {
     fun getPhone(context: Context): String =
         prefs(context).getString(KEY_PHONE, "") ?: ""
 
+    private const val KEY_CONTACTS = "contacts_json"
+
     fun clear(context: Context) {
         prefs(context).edit().clear().apply()
+    }
+
+    fun saveContactsLocal(context: Context, json: String) {
+        prefs(context).edit().putString(KEY_CONTACTS, json).apply()
+    }
+
+    fun getContactsLocal(context: Context): String {
+        return prefs(context).getString(KEY_CONTACTS, "[]") ?: "[]"
     }
 }

@@ -29,6 +29,10 @@ class AccidentDetector(private val context: Context) {
     // Tracking last acc_mag to calculate Jerk
     private var lastAccMag: Float = 0f
 
+    // Cooldown: prevent SOS from firing multiple times within 30 seconds
+    private var lastSosTriggerTime: Long = 0L
+    private val SOS_COOLDOWN_MS = 30_000L
+
     // Python StandardScaler exact values (from Colab export)
     private val SCALER_MEANS = floatArrayOf(0.5712545f, 0.47822156f, 10.075371f, 0.01969897f, 0.01948064f, 0.02012330f, 45.072067f, 10.200145f, 0.0857426f, 0.00041608f)
     private val SCALER_SCALES = floatArrayOf(1.1308369f, 1.1277571f, 1.0527784f, 0.04971329f, 0.05021980f, 0.04986825f, 20.985805f, 1.2977516f, 0.0360691f, 0.5210295f)
@@ -74,15 +78,27 @@ class AccidentDetector(private val context: Context) {
         gyroX: Float, gyroY: Float, gyroZ: Float,
         speedKmh: Float
     ): Boolean {
-        if (!isInitialized || interpreter == null) return false
-
-        // 1. Calculate derived physics features
+        // 1. Calculate derived physics features (always, regardless of model state)
         val accMag = sqrt((accX * accX + accY * accY + accZ * accZ).toDouble()).toFloat()
-        val gyroMag = sqrt((gyroX * gyroX + gyroY * gyroY + gyroZ * gyroZ).toDouble()).toFloat()
-        val jerk = if (windowBuffer.isEmpty()) 0f else (accMag - lastAccMag)
+        val jerk = if (windowBuffer.isEmpty()) 0f else Math.abs(accMag - lastAccMag)
         lastAccMag = accMag
 
+        // ── HARDWARE SHAKE OVERRIDE ──────────────────────────────────────────
+        // This runs FIRST, before any model check, so it works even if TFLite fails to load.
+        // Gravity at rest = ~9.8. A value > 20 means violent shake/impact.
+        val now = System.currentTimeMillis()
+        if ((accMag > 20f || jerk > 12f) && (now - lastSosTriggerTime) > SOS_COOLDOWN_MS) {
+            Log.e("AccidentDetector", "🚨 SHAKE DETECTED (Mag: $accMag, Jerk: $jerk) → FORCING SOS! 🚨")
+            lastSosTriggerTime = now
+            windowBuffer.clear()
+            return true
+        }
+
+        // If model not ready, skip AI inference (shake override above still works)
+        if (!isInitialized || interpreter == null) return false
+
         // 2. Assemble 10 feature array
+        val gyroMag = sqrt((gyroX * gyroX + gyroY * gyroY + gyroZ * gyroZ).toDouble()).toFloat()
         val rawFeatures = floatArrayOf(
             accX, accY, accZ,
             gyroX, gyroY, gyroZ,
@@ -138,8 +154,10 @@ class AccidentDetector(private val context: Context) {
             }
 
             // CRITICAL LOGIC: If network predicts Collision (2) or Rollover (4) with high confidence!
-            if ((maxIndex == 2 || maxIndex == 4) && maxConfidence >= 0.70f) {
+            val now2 = System.currentTimeMillis()
+            if ((maxIndex == 2 || maxIndex == 4) && maxConfidence >= 0.70f && (now2 - lastSosTriggerTime) > SOS_COOLDOWN_MS) {
                 Log.e("AccidentDetector", "🚨🚨 CRITICAL CRASH DETECTED VIA CNN: ${classMap[maxIndex]} 🚨🚨")
+                lastSosTriggerTime = now2
                 return true
             }
             
