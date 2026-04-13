@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.team404.dualshield.MainActivity
 import com.team404.dualshield.ai.AccidentDetector
 import com.team404.dualshield.api.BackendApi
 import kotlinx.coroutines.CoroutineScope
@@ -42,6 +43,17 @@ class SensorMonitoringService : Service(), SensorEventListener {
     // Prevent multiple SOS triggers firing in rapid succession
     private var sosActive = false
 
+    private val cancelReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.team404.dualshield.ACTION_SOS_CANCELLED") {
+                Log.d("DualShield", "SOS Cancelled Broadcast received. Resetting state.")
+                sosActive = false
+                accidentDetector.resetCooldown()
+                com.team404.dualshield.emergency.EmergencyManager.resetSosStatus()
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -56,6 +68,11 @@ class SensorMonitoringService : Service(), SensorEventListener {
 
         accidentDetector = AccidentDetector(this)
         
+        // Register for cancel events
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).registerReceiver(
+            cancelReceiver, android.content.IntentFilter("com.team404.dualshield.ACTION_SOS_CANCELLED")
+        )
+
         // Android 14+ requires specific foreground types
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -69,22 +86,7 @@ class SensorMonitoringService : Service(), SensorEventListener {
             }
         } catch (e: Exception) {
             Log.e("DualShield", "Foreground start failed: ${e.message}")
-            // Fallback for older versions or if type fails
             startForeground(1, createNotification())
-        }
-        
-        checkHighRiskZones()
-    }
-
-    private fun checkHighRiskZones() {
-        serviceScope.launch {
-            try {
-                val response = api.getAccidentZones()
-                val zones = response.body()
-                Log.d("DualShield", "Loaded ${zones?.size ?: 0} high risk zones.")
-            } catch (e: Exception) {
-                Log.e("DualShield", "Failed to fetch geofences: ${e.message}")
-            }
         }
     }
 
@@ -119,7 +121,7 @@ class SensorMonitoringService : Service(), SensorEventListener {
                 val accY = event.values[1]
                 val accZ = event.values[2]
 
-                // Stream into the TFLite 1D CNN pipeline
+                // Stream into the TFLite pipeline
                 val isCrash = accidentDetector.processSensorData(
                     accX, accY, accZ,
                     currentGyroX, currentGyroY, currentGyroZ,
@@ -129,9 +131,9 @@ class SensorMonitoringService : Service(), SensorEventListener {
                 if (isCrash && !sosActive) {
                     sosActive = true
                     triggerEmergencyProtocol()
-                    // Reset flag after 35 seconds (slightly longer than AccidentDetector cooldown)
+                    // Reset flag after 45 seconds as a safety backup
                     serviceScope.launch {
-                        kotlinx.coroutines.delay(35_000L)
+                        kotlinx.coroutines.delay(45_000L)
                         sosActive = false
                     }
                 }
@@ -140,11 +142,67 @@ class SensorMonitoringService : Service(), SensorEventListener {
     }
 
     private fun triggerEmergencyProtocol() {
-        val intent = Intent(this, com.team404.dualshield.MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            putExtra("trigger_sos", true)
+        Log.w("DualShield", "🚨 CRASH DETECTED! Triggering Protocol")
+
+        // 1. Create intent for the Emergency Activity
+        val emergencyIntent = Intent(this, com.team404.dualshield.emergency.EmergencyActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
+                     Intent.FLAG_ACTIVITY_CLEAR_TOP or 
+                     Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT) // Aggressive flags
         }
-        startActivity(intent)
+
+        // 2. Launch via Notification fullScreenIntent → Handles LOCKED screen
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            this, 999, emergencyIntent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 3. Attempt to start directly (Works if app is in foreground or has SYSTEM_ALERT_WINDOW permission)
+        try {
+            startActivity(emergencyIntent)
+        } catch (e: Exception) {
+            Log.e("DualShield", "Failed to start activity directly: ${e.message}")
+        }
+
+        // 4. Alternative aggressive launch via PendingIntent.send() 
+        // Some OEMs react better to this for background activity starts
+        try {
+            pendingIntent.send()
+        } catch (e: Exception) {
+            Log.e("DualShield", "Failed to send pending intent: ${e.message}")
+        }
+
+        val channelId = "EmergencyAlertChannel"
+        val manager = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val channel = NotificationChannel(channelId, "Emergency Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                }
+                manager.createNotificationChannel(channel)
+            } catch (e: Exception) {
+                Log.e("DualShield", "Failed to create NotificationChannel: ${e.message}")
+            }
+        }
+
+        try {
+            val notification = androidx.core.app.NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("🚨 Crash Detected!")
+                .setContentText("Emergency protocol started. Tap to view.")
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+                .setFullScreenIntent(pendingIntent, true)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setOngoing(true)
+                .build()
+
+            manager.notify(999, notification)
+        } catch (e: Exception) {
+            Log.e("DualShield", "Failed to show notification: ${e.message}")
+        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -152,6 +210,7 @@ class SensorMonitoringService : Service(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         sensorManager.unregisterListener(this)
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(cancelReceiver)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

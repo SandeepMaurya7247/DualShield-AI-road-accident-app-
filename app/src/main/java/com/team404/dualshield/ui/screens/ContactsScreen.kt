@@ -169,10 +169,20 @@ fun ContactsScreen(
                                 onDelete = {
                                     scope.launch {
                                         try {
-                                            api.deleteContact(userPhone, c.contact_phone)
-                                            loadContacts()
-                                            statusMsg = "Guardian removed"
-                                        } catch (e: Exception) { }
+                                            val response = api.deleteContact(userPhone, c.contact_phone)
+                                            if (response.isSuccessful) {
+                                                loadContacts()
+                                                statusMsg = "Guardian removed"
+                                            } else {
+                                                contacts = contacts.filter { it.contact_phone != c.contact_phone }
+                                                com.team404.dualshield.api.UserSession.saveContactsLocal(context, com.google.gson.Gson().toJson(contacts))
+                                                statusMsg = "Offline: Removed locally"
+                                            }
+                                        } catch (e: Exception) {
+                                            contacts = contacts.filter { it.contact_phone != c.contact_phone }
+                                            com.team404.dualshield.api.UserSession.saveContactsLocal(context, com.google.gson.Gson().toJson(contacts))
+                                            statusMsg = "Offline: Removed locally"
+                                        }
                                     }
                                 }
                             )

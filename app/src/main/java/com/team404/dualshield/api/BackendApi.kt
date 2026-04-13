@@ -112,7 +112,7 @@ interface BackendApi {
     suspend fun healthCheck(): Response<HealthResponse>
 
     companion object {
-        private const val BASE_URL = "http://10.75.92.223:5000/"
+        private const val BASE_URL = "http://172.18.100.102:5000/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()

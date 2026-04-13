@@ -1,29 +1,33 @@
 package com.team404.dualshield
 
 import android.Manifest
+import android.app.KeyguardManager
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.net.Uri
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
 import com.team404.dualshield.services.SensorMonitoringService
 import com.team404.dualshield.ui.navigation.DualShieldNavGraph
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import com.team404.dualshield.ui.theme.DualShieldTheme
 
 class MainActivity : ComponentActivity() {
-
-    private var sosTriggered by mutableStateOf(false)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -42,7 +46,7 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.RECORD_AUDIO
         )
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
         
@@ -62,23 +66,29 @@ class MainActivity : ComponentActivity() {
         startForegroundService(serviceIntent)
     }
 
+    private fun checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                android.util.Log.w("MainActivity", "Requesting SYSTEM_ALERT_WINDOW permission")
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         checkPermissions()
-        handleSosIntent(intent)
+        checkOverlayPermission() // Ask for "Appear on top" permission
 
         setContent {
             DualShieldTheme {
                 val navController = rememberNavController()
                 
-                LaunchedEffect(sosTriggered) {
-                    if (sosTriggered) {
-                        navController.navigate("countdown")
-                        sosTriggered = false // Reset after navigation
-                    }
-                }
-
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -89,15 +99,41 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        requestLockScreenBypass()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requestLockScreenBypass()
+    }
+
+    private fun requestLockScreenBypass() {
+        android.util.Log.d("MainActivity", "Requesting Lock Screen Bypass")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+            keyguardManager.requestDismissKeyguard(this, null)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleSosIntent(intent)
     }
 
-    private fun handleSosIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra("trigger_sos", false) == true) {
-            sosTriggered = true
-        }
+    override fun onDestroy() {
+        super.onDestroy()
     }
 }

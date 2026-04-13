@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 package com.team404.dualshield.ui.navigation
 
 import androidx.compose.foundation.background
@@ -85,10 +86,16 @@ fun DualShieldNavGraph(navController: NavHostController = rememberNavController(
                     CountdownScreen(
                         userId = UserSession.getUserId(context),
                         userPhone = UserSession.getPhone(context),
-                        onCancel = { navController.popBackStack() },
+                        onCancel = { 
+                            navController.navigate("home") {
+                                popUpTo(0)
+                                launchSingleTop = true
+                            }
+                        },
                         onTimeUp = {
                             navController.navigate("home") { 
-                                popUpTo("home")
+                                popUpTo(0)
+                                launchSingleTop = true
                             }
                         }
                     )

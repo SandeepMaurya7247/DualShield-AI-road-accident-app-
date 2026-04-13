@@ -19,13 +19,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +35,7 @@ import com.team404.dualshield.api.BackendApi
 import com.team404.dualshield.api.ContactItem
 import com.team404.dualshield.api.IncidentReport
 import com.team404.dualshield.ui.theme.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -53,32 +52,41 @@ fun CountdownScreen(
     val scope = rememberCoroutineScope()
     
     var timeLeft by remember { mutableStateOf(30) }
+    var countdownActive by remember { mutableStateOf(true) }
     var sosDispatched by remember { mutableStateOf(false) }
     var contacts by remember { mutableStateOf<List<ContactItem>>(emptyList()) }
     var aiStatus by remember { mutableStateOf("Initializing AI...") }
     var audioPermissionGranted by remember { mutableStateOf(false) }
+    
+    var dispatchJob by remember { mutableStateOf<Job?>(null) }
 
-    // AI Assistant Manager
+    fun performCancel() {
+        Log.w("CountdownScreen", "❌ USER CANCELLED SOS")
+        countdownActive = false
+        dispatchJob?.cancel()
+        
+        // Notify service to reset its trigger flag immediately
+        val intent = Intent("com.team404.dualshield.ACTION_SOS_CANCELLED")
+        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        
+        com.team404.dualshield.emergency.EmergencyManager.resetSosStatus()
+        onCancel()
+    }
+
     val assistantManager = remember {
         SpeechAssistantManager(
             context = context,
             onReady = {
-                if (audioPermissionGranted) {
+                if (audioPermissionGranted && countdownActive) {
                     aiStatus = "Listening for 'Yes'..."
-                    Log.d("CountdownScreen", "AI Ready")
                 }
             },
             onCommandDetected = { command ->
                 if (command == "CANCEL") {
-                    scope.launch { onCancel() }
+                    Log.w("CountdownScreen", "🤖 Voice command: CANCEL")
+                    performCancel()
                 }
             }
-        )
-    }
-
-    var smsPermissionGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -86,39 +94,35 @@ fun CountdownScreen(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { perms ->
         audioPermissionGranted = perms[Manifest.permission.RECORD_AUDIO] == true
-        smsPermissionGranted = perms[Manifest.permission.SEND_SMS] == true
-        if (audioPermissionGranted) {
+        if (audioPermissionGranted && countdownActive) {
             scope.launch {
-                delay(800)
-                assistantManager.askSafetyQuery()
-                assistantManager.startListening()
+                delay(1500)
+                if (countdownActive) {
+                    assistantManager.askSafetyQuery()
+                    assistantManager.startListening()
+                }
             }
         }
     }
 
     LaunchedEffect(Unit) {
         if (userPhone.isNotEmpty()) {
-            Log.d("CountdownScreen", "Fetching contacts for user: $userPhone")
             try {
                 val response = api.getContacts(userPhone)
                 if (response.isSuccessful) {
                     contacts = response.body() ?: emptyList()
-                    Log.d("CountdownScreen", "Found ${contacts.size} emergency contacts from server")
                 } else {
                     val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
                     val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
                     contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
-                    Log.d("CountdownScreen", "Fallback to local: ${contacts.size} contacts")
                 }
             } catch (e: Exception) {
                 val localJson = com.team404.dualshield.api.UserSession.getContactsLocal(context)
                 val type = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
                 contacts = com.google.gson.Gson().fromJson(localJson, type) ?: emptyList()
-                Log.e("CountdownScreen", "Error fetching contacts, using local: ${contacts.size} contacts")
             }
-        } else {
-            Log.w("CountdownScreen", "No user phone provided, cannot fetch contacts!")
         }
+        delay(300)
         permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CALL_PHONE, Manifest.permission.SEND_SMS))
     }
 
@@ -135,113 +139,49 @@ fun CountdownScreen(
     }
 
     fun dispatchSos() {
-        if (!sosDispatched) {
-            sosDispatched = true
-            scope.launch {
-                aiStatus = "Dispatching Emergency Alerts..."
-                val (lat, lng) = getLiveLocation()
-                
-                // 1. Report to Backend
-                try {
-                    api.reportIncident(IncidentReport(userId, lat, lng, 3, System.currentTimeMillis()))
-                } catch (e: Exception) {}
+        if (sosDispatched) return  // Only check if already dispatched, nothing else
+        sosDispatched = true
+        Log.d("CountdownScreen", "⏱️ 30 seconds over. Dispatching SOS now!")
+        
+        dispatchJob = scope.launch {
+            aiStatus = "SOS Sent! Calling Guardian..."
 
-                // 2. Send SMS to ALL primary contacts
-                val currentSmsPermission = ContextCompat.checkSelfPermission(
-                    context, Manifest.permission.SEND_SMS
-                ) == PackageManager.PERMISSION_GRANTED
+            val contactPhones = contacts.map { it.contact_phone.trim() }.filter { it.isNotEmpty() }
 
-                if (!currentSmsPermission) {
-                    Log.e("SOS_Dispatch", "SEND_SMS permission not granted! Cannot send SMS.")
-                    aiStatus = "SMS Permission Denied! Check app settings."
-                } else {
-                    try {
-                        val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            context.getSystemService(SmsManager::class.java)
-                                ?: run {
-                                    Log.e("SOS_Dispatch", "SmsManager is null on API 31+")
-                                    null
-                                } ?: return@launch
-                        } else {
-                            @Suppress("DEPRECATION")
-                            SmsManager.getDefault()
-                        }
-
-                        val message = "EMERGENCY! DualShield AI detected a crash. My live location: https://www.google.com/maps?q=$lat,$lng - Please call me immediately!"
-
-                        if (contacts.isEmpty()) {
-                            Log.w("SOS_Dispatch", "No contacts found to notify!")
-                            aiStatus = "No Contacts Found! Calling..."
-                        } else {
-                            var sentCount = 0
-                            contacts.forEach { contact ->
-                                val phone = contact.contact_phone.trim()
-                                if (phone.isNotEmpty()) {
-                                    try {
-                                        // Use multipart to handle long messages (>160 chars)
-                                        val parts = smsManager.divideMessage(message)
-                                        if (parts.size == 1) {
-                                            smsManager.sendTextMessage(phone, null, message, null, null)
-                                        } else {
-                                            smsManager.sendMultipartTextMessage(phone, null, parts, null, null)
-                                        }
-                                        sentCount++
-                                        Log.d("SOS_Dispatch", "SMS dispatched to $phone (${parts.size} part(s))")
-                                    } catch (smsEx: Exception) {
-                                        Log.e("SOS_Dispatch", "SMS to $phone failed: ${smsEx.message}")
-                                    }
-                                }
-                            }
-                            aiStatus = if (sentCount > 0) "SMS Sent to $sentCount Guardian(s). Calling in 5s..."
-                                       else "SMS Failed – check contacts!"
-                        }
-                    } catch (e: Exception) {
-                        Log.e("SOS_Dispatch", "SMS block error: ${e.message}")
-                        aiStatus = "SMS Error: ${e.message?.take(40)}"
-                    }
-                }
-
-                // 3. Wait for 5 seconds as requested by user
-                delay(5000L)
-
-                // 4. Trigger automated Phone Call
-                val primaryContact = contacts.firstOrNull()
-                val emergencyNumber = if (primaryContact != null && primaryContact.contact_phone.isNotBlank()) primaryContact.contact_phone else "112"
-                
-                val callIntent = Intent(Intent.ACTION_CALL).apply {
-                    data = Uri.parse("tel:$emergencyNumber")
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                try { 
-                    context.startActivity(callIntent) 
-                    Log.d("SOS_Dispatch", "Initiating Call to $emergencyNumber")
-                } catch (e: Exception) {
-                    Log.e("SOS_Dispatch", "Call failed: ${e.message}")
-                }
-
-                assistantManager.stop()
-                onTimeUp()
+            Log.d("CountdownScreen", "Contacts found: ${contactPhones.size} → $contactPhones")
+            if (contactPhones.isEmpty()) {
+                Log.w("CountdownScreen", "⚠️ No emergency contacts! Calling 112 as fallback.")
             }
+
+            val emergencyManager = com.team404.dualshield.emergency.EmergencyManager(context)
+            emergencyManager.dispatchSOS(contactPhones, userId)
+
+            assistantManager.stop()
+            onTimeUp()
         }
     }
 
-    LaunchedEffect(timeLeft) {
-        if (timeLeft > 0) {
+    // Reliable countdown using a single LaunchedEffect
+    LaunchedEffect(Unit) {
+        while (countdownActive && timeLeft > 0) {
             delay(1000L)
             timeLeft -= 1
-        } else {
+        }
+        if (countdownActive) {
             dispatchSos()
         }
     }
 
     DisposableEffect(Unit) {
-        onDispose { assistantManager.stop() }
+        onDispose { 
+            assistantManager.stop() 
+            dispatchJob?.cancel()
+        }
     }
 
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
-        // Tactical Background Layer
         TacticalGrid(gridColor = sentinelRed.copy(alpha = 0.05f))
 
         Column(
@@ -249,7 +189,7 @@ fun CountdownScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Pulse Glow Header
+            // Voice Status
             Row(
                 modifier = Modifier
                     .background(sentinelRed.copy(alpha = 0.15f), CircleShape)
@@ -274,59 +214,48 @@ fun CountdownScreen(
                     .border(1.dp, sentinelRed, RoundedCornerShape(12.dp))
                     .padding(horizontal = 20.dp, vertical = 8.dp)
             ) {
-                Text(
-                    "CRITICAL IMPACT ALERT", 
-                    color = sentinelGlowRed, 
-                    fontSize = 12.sp, 
-                    fontWeight = FontWeight.Black, 
-                    letterSpacing = 2.sp
-                )
+                Text("CRITICAL IMPACT ALERT", color = sentinelGlowRed, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("CRASH\nDETECTED!", color = MaterialTheme.colorScheme.onBackground, fontSize = 42.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, lineHeight = 48.sp)
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("Assistant is asking: \"Are you safe?\"", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(progress = timeLeft / 30f, modifier = Modifier.fillMaxSize(), color = AlertRedBright, trackColor = MaterialTheme.colorScheme.surfaceVariant, strokeWidth = 8.dp)
-            Text(text = "$timeLeft", color = MaterialTheme.colorScheme.onBackground, fontSize = 80.sp, fontWeight = FontWeight.Light)
-        }
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        SentinelCard(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("SAY \"YES\" TO CANCEL PROTOCOL", color = sentinelGreen, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                Text(if (sosDispatched) "SOS DISPATCHED" else "Emergency signal in $timeLeft seconds", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("CRASH DETECTED!", color = MaterialTheme.colorScheme.onBackground, fontSize = 38.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, lineHeight = 44.sp)
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(progress = timeLeft / 30f, modifier = Modifier.fillMaxSize(), color = AlertRedBright, trackColor = MaterialTheme.colorScheme.surfaceVariant, strokeWidth = 8.dp)
+                Text(text = "$timeLeft", color = MaterialTheme.colorScheme.onBackground, fontSize = 70.sp, fontWeight = FontWeight.Light)
             }
-        }
+            
+            Spacer(modifier = Modifier.weight(1f))
+            
+            SentinelCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("SAY \"YES\" TO CANCEL", color = sentinelGreen, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    Text("Emergency signal in $timeLeft seconds", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                }
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Button(
-            onClick = { dispatchSos() },
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
-            shape = RoundedCornerShape(100.dp)
-        ) {
-            Text(if (sosDispatched) "STAY CALM" else "SEND SOS NOW", color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedButton(
-            onClick = onCancel,
-            modifier = Modifier.fillMaxWidth().height(60.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            shape = RoundedCornerShape(100.dp)
-        ) {
-            Text("CANCEL SOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Button(
+                onClick = { dispatchSos() },
+                modifier = Modifier.fillMaxWidth().height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = AlertRed),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text(if (sosDispatched) "SENDING..." else "SEND SOS NOW", color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = { performCancel() },
+                modifier = Modifier.fillMaxWidth().height(60.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onBackground),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                shape = RoundedCornerShape(100.dp)
+            ) {
+                Text("CANCEL SOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

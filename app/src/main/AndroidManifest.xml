@@ -16,6 +16,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -33,7 +35,10 @@
             android:name="com.team404.dualshield.MainActivity"
             android:exported="true"
             android:label="Dual Shield"
-            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+            android:theme="@android:style/Theme.DeviceDefault.Light.NoActionBar"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:showForAllUsers="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -43,6 +48,16 @@
             android:name=".services.SensorMonitoringService"
             android:foregroundServiceType="location|microphone"
             android:exported="false" />
+
+        <activity
+            android:name=".emergency.EmergencyActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:showForAllUsers="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
 
     </application>
 

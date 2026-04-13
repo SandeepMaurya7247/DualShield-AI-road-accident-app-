@@ -245,16 +245,17 @@ fun MapScreen() {
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(
                     isMyLocationEnabled = true,
-                    mapType = MapType.NORMAL,
-                    mapStyleOptions = MapStyleOptions(MapTheme.DARK_JSON)
+                    mapType = MapType.NORMAL
                 ),
                 uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
             ) {
                 userLat?.let { lat -> userLng?.let { lng ->
-                    Marker(state = MarkerState(LatLng(lat, lng)), title = "You", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    val userMarkerState = rememberMarkerState(position = LatLng(lat, lng))
+                    Marker(state = userMarkerState, title = "You", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                     
                     destinationLatLng?.let { target ->
-                        Marker(state = MarkerState(target), title = "Destination", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                        val destMarkerState = rememberMarkerState(position = target)
+                        Marker(state = destMarkerState, title = "Destination", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
                         if (routePoints != null && routePoints!!.isNotEmpty()) {
                             Polyline(points = routePoints!!, color = sentinelGlowBlue, width = 12f)
                         } else {
@@ -475,9 +476,9 @@ private fun buildLeafletHtml(lat: Double, lng: Double, zones: List<Zone>): Strin
         <style>
             body { margin: 0; background: #0F172A; }
             #map { width: 100vw; height: 100vh; }
-            /* Dark themed map filtering */
-            .leaflet-tile { filter: brightness(0.6) contrast(1.2) invert(100%) hue-rotate(180deg) saturate(0.3) brightness(1.7); }
-            .leaflet-container { background-color: #0F172A !important; }
+            /* Light themed map filtering */
+            .leaflet-tile { }
+            .leaflet-container { background-color: #FFFFFF !important; }
         </style>
     </head>
     <body>

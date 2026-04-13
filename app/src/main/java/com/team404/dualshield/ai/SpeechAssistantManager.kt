@@ -68,7 +68,8 @@ class SpeechAssistantManager(
                     Log.d("AI_Assistant", "STT Heard: $it")
                     if (it.any { s -> 
                         val text = s.lowercase()
-                        text.contains("yes") || text.contains("safe") || text.contains("fine") || text.contains("ok")
+                        text.contains("yes") || text.contains("safe") || text.contains("fine") || 
+                        text.contains("ok") || text.contains("haan") || text.contains("thik")
                     }) {
                         onCommandDetected("CANCEL")
                     }
@@ -94,7 +95,18 @@ class SpeechAssistantManager(
                     startListening()
                 }
             }
-            override fun onPartialResults(partialResults: Bundle?) {}
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                matches?.let {
+                    if (it.any { s -> 
+                        val text = s.lowercase()
+                        text.contains("yes") || text.contains("safe") || text.contains("haan") || text.contains("thik")
+                    }) {
+                        Log.d("AI_Assistant", "STT Partial Match Detected: $it")
+                        onCommandDetected("CANCEL")
+                    }
+                }
+            }
             override fun onEvent(eventType: Int, params: Bundle?) {}
         })
     }
@@ -105,6 +117,11 @@ class SpeechAssistantManager(
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                // SPEED OPTIMIZATIONS
+                putExtra("android.speech.extra.DICTATION_MODE", true)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
             }
             try {
                 speechRecognizer?.startListening(intent)

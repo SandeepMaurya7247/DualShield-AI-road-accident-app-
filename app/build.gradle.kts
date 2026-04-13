@@ -80,4 +80,7 @@ dependencies {
     
     // Play Services TFLite (Bypasses 16KB alignment issues)
     implementation("com.google.android.gms:play-services-tflite-java:16.4.0")
+
+    // Local Broadcast Manager for service-to-UI communication
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 }

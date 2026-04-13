@@ -29,3 +29,18 @@ captures/
 google-services.json
 
 # Full Stack Repository (Frontend & Backend Included)
+node_modules/
+backend/node_modules/
+.env
+backend/.env
+__pycache__/
+backend/__pycache__/
+*.pyc
+.DS_Store
+*.swp
+*.bak
+dist/
+build/
+.next/
+.idea/
+.vscode/

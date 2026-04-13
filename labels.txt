@@ -1,0 +1,5 @@
+Normal
+Sudden_Fall
+Collision
+Harsh_Braking
+Rollover
