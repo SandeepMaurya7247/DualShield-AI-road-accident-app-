@@ -60,7 +60,8 @@ data class Zone(
     val name: String = "Unknown Zone",
     val lat: Double,
     val lng: Double,
-    val radius: Float
+    val radius: Float,
+    val risk: String? = "Moderate"
 )
 
 data class ContactItem(
@@ -112,7 +113,7 @@ interface BackendApi {
     suspend fun healthCheck(): Response<HealthResponse>
 
     companion object {
-        private const val BASE_URL = "http://172.18.100.102:5000/"
+        private const val BASE_URL = "https://dual-shield-safe.loca.lt/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()

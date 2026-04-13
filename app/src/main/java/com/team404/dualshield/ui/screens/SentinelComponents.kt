@@ -74,16 +74,14 @@ fun SentinelCard(
         modifier = modifier.fillMaxWidth(),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = lightCard
         ),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp, 
-            Brush.linearGradient(
-                listOf(MaterialTheme.colorScheme.outline, Color.Transparent, MaterialTheme.colorScheme.outline)
-            )
-        )
+        border = androidx.compose.foundation.BorderStroke(1.dp, lightBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        content()
+        Column(modifier = Modifier.padding(2.dp)) {
+            content()
+        }
     }
 }
 

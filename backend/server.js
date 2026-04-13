@@ -37,7 +37,8 @@ function saveFallbackStore() {
 mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 })
     .then(() => {
         isDbConnected = true;
-        console.log("MongoDB connected successfully.");
+        const dbName = mongoose.connection.name;
+        console.log(`MongoDB connected successfully to database: "${dbName}"`);
     })
     .catch((err) => {
         isDbConnected = false;
@@ -90,6 +91,7 @@ app.get('/health', (req, res) => {
 app.post('/api/users/register', async (req, res) => {
     try {
         const { name, phone } = req.body;
+        console.log(`[AUTH] Registration request received: ${name} (${phone})`);
         if (!phone) return res.status(400).json({ error: 'phone is required' });
         
         let uid = phone;
@@ -113,6 +115,7 @@ app.post('/api/users/register', async (req, res) => {
 app.post('/api/users/login', async (req, res) => {
     try {
         const phone = (req.body.phone || '').trim();
+        console.log(`[AUTH] Login attempt for phone: ${phone}`);
         if (!phone) return res.status(400).json({ error: 'phone is required' });
 
         if (isDbConnected) {
@@ -200,9 +203,9 @@ app.get('/api/geofences/accident-zones', async (req, res) => {
         
         if (zones.length === 0) {
             zones = [
-                {"name": "NH-8 High Risk Curve", "lat": 28.4595, "lng": 77.0266, "radius": 500},
-                {"name": "Accident Prone Intersection", "lat": 28.6139, "lng": 77.2090, "radius": 300},
-                {"name": "Highway Blind Spot", "lat": 28.5355, "lng": 77.3910, "radius": 400}
+                {"name": "NH-8 High Risk Curve", "lat": 28.4595, "lng": 77.0266, "radius": 500, "risk": "Very High"},
+                {"name": "Accident Prone Intersection", "lat": 28.6139, "lng": 77.2090, "radius": 300, "risk": "High"},
+                {"name": "Highway Blind Spot", "lat": 28.5355, "lng": 77.3910, "radius": 400, "risk": "Moderate"}
             ];
         }
         res.status(200).json(zones);
@@ -232,7 +235,7 @@ app.post('/api/users/:phone/contacts', async (req, res) => {
     try {
         const phone = req.params.phone.trim();
         const data = req.body;
-        const contact_phone = (data.contact_phone || '').trim();
+        console.log(`[CONTACTS] Saving contact for ${phone}: ${data.contact_name} (${data.contact_phone})`);        const contact_phone = (data.contact_phone || '').trim();
         
         if (!data.contact_name || !contact_phone) {
             return res.status(400).json({ error: 'contact_name and contact_phone required' });

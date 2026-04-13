@@ -59,6 +59,15 @@ class SpeechAssistantManager(
         }
     }
 
+    fun speakText(text: String) {
+        if (isTtsReady) {
+            Log.d("AI_Assistant", "Speaking warning: $text")
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "warning_alert")
+        } else {
+            Log.w("AI_Assistant", "speakText called before TTS was ready")
+        }
+    }
+
     private fun setupSpeechRecognizer() {
         speechRecognizer?.setRecognitionListener(object : RecognitionListener {
             override fun onReadyForSpeech(params: Bundle?) { Log.d("AI_Assistant", "STT: Ready for speech") }

@@ -21,6 +21,14 @@ import com.team404.dualshield.api.BackendApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.google.android.gms.location.*
+import com.team404.dualshield.ai.SpeechAssistantManager
+import com.team404.dualshield.api.Zone
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import android.location.Location
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import android.os.Looper
 
 class SensorMonitoringService : Service(), SensorEventListener {
 
@@ -42,6 +50,15 @@ class SensorMonitoringService : Service(), SensorEventListener {
     
     // Prevent multiple SOS triggers firing in rapid succession
     private var sosActive = false
+    
+    // Risk Zone Monitoring
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+    private var riskZones = listOf<Zone>()
+    private var speechAssistant: SpeechAssistantManager? = null
+    private var lastAlertTime = 0L
+    private var isCurrentlyInRiskZone = false
+    private var lastBroadcastedStatus = false
 
     private val cancelReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -72,6 +89,13 @@ class SensorMonitoringService : Service(), SensorEventListener {
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).registerReceiver(
             cancelReceiver, android.content.IntentFilter("com.team404.dualshield.ACTION_SOS_CANCELLED")
         )
+
+        // Initialize Risk Zone Monitoring
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        loadRiskZones()
+        setupLocationMonitoring()
+        
+        speechAssistant = SpeechAssistantManager(this, onReady = {}, onCommandDetected = {})
 
         // Android 14+ requires specific foreground types
         try {
@@ -207,11 +231,83 @@ class SensorMonitoringService : Service(), SensorEventListener {
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
+
+
+    private fun loadRiskZones() {
+        try {
+            val jsonString = assets.open("risk_zones.json").bufferedReader().use { it.readText() }
+            val listType = object : TypeToken<List<Zone>>() {}.type
+            riskZones = Gson().fromJson(jsonString, listType) ?: emptyList()
+            Log.d("DualShield", "Loaded ${riskZones.size} risk zones in Service")
+        } catch (e: Exception) {
+            Log.e("DualShield", "Error loading risk zones in Service: ${e.message}")
+        }
+    }
+
+    private fun setupLocationMonitoring() {
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val location = result.lastLocation ?: return
+                currentSpeedKmh = (location.speed * 3.6).toInt().coerceAtLeast(0).toFloat()
+                checkRiskZones(location)
+            }
+        }
+        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L).build()
+        try {
+            fusedLocationClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper())
+        } catch (e: SecurityException) {
+            Log.e("DualShield", "Location permission missing for Service")
+        }
+    }
+
+    private fun checkRiskZones(location: Location) {
+        var inAnyZone = false
+        for (zone in riskZones) {
+            val dest = Location("").apply {
+                latitude = zone.lat
+                longitude = zone.lng
+            }
+            val distance = location.distanceTo(dest)
+            
+            if (distance <= zone.radius) {
+                inAnyZone = true
+                val speed = location.speed * 3.6
+                if (speed > 20 && speed > 10) {
+                    triggerVoiceWarning()
+                }
+                break // Stop at first matched zone
+            }
+        }
+        
+        if (inAnyZone != lastBroadcastedStatus) {
+            lastBroadcastedStatus = inAnyZone
+            broadcastRiskStatus(inAnyZone)
+        }
+    }
+
+    private fun triggerVoiceWarning() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastAlertTime > 15000L) { // 15 second cooldown for background
+            Log.w("DualShield", "🔊 TRIGGERING VOICE WARNING: Dheere chaliye...")
+            speechAssistant?.speakText("Dheere chaliye, high risk zone hai")
+            lastAlertTime = currentTime
+        }
+    }
+
+    private fun broadcastRiskStatus(isHighRisk: Boolean) {
+        val intent = Intent("com.team404.dualshield.RISK_STATUS_CHANGED").apply {
+            putExtra("isHighRisk", isHighRisk)
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
     override fun onDestroy() {
         super.onDestroy()
         sensorManager.unregisterListener(this)
         androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(cancelReceiver)
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+        speechAssistant?.stop()
     }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }
