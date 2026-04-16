@@ -46,10 +46,16 @@ private val LightColorScheme = lightColorScheme(
 )
 @Composable
 fun DualShieldTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: String = "SYSTEM",
     dynamicColor: Boolean = false, // We want strict colors for emergency app
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        "LIGHT" -> false
+        "DARK" -> true
+        else -> isSystemInDarkTheme()
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

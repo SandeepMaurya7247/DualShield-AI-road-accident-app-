@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.key
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,15 +105,48 @@ fun HomeScreen(
         }
     }
 
-    // Auto-follow logic for Mini-Map (Safe lifecycle-aware approach)
-    LaunchedEffect(gpsLat, gpsLng) {
+    // Auto-follow logic for Mini-Map (Centers only on first fix or re-center request)
+    var hasCentered by remember { mutableStateOf(false) }
+    
+    val centerOnUser: () -> Unit = {
         if (gpsLat != null && gpsLng != null) {
-            try {
-                cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(LatLng(gpsLat!!, gpsLng!!), 16f)
-                )
-            } catch (e: Exception) {
-                // Silently fail if map isn't ready
+            scope.launch {
+                try {
+                    cameraPositionState.animate(
+                        CameraUpdateFactory.newLatLngZoom(LatLng(gpsLat!!, gpsLng!!), 16f)
+                    )
+                } catch (e: Exception) { }
+            }
+        }
+    }
+
+    LaunchedEffect(gpsLat, gpsLng) {
+        if (!hasCentered && gpsLat != null && gpsLng != null) {
+            centerOnUser()
+            hasCentered = true
+        }
+    }
+
+    // ── High Risk Zone Safety Sentinel ──────────────────────────────
+    var lastWarningTime by remember { mutableStateOf(0L) }
+    
+    LaunchedEffect(gpsLat, gpsLng, gpsSpeed) {
+        val lat = gpsLat ?: return@LaunchedEffect
+        val lng = gpsLng ?: return@LaunchedEffect
+        
+        // 1. Check if user is inside any high-risk zone
+        val currentInZone = zones.any { zone ->
+            val results = FloatArray(1)
+            Location.distanceBetween(lat, lng, zone.lat, zone.lng, results)
+            results[0] <= zone.radius
+        }
+
+        // 2. Trigger voice warning if in zone AND speeding (> 20 km/h)
+        val currentTime = System.currentTimeMillis()
+        if (currentInZone && gpsSpeed > 20) {
+            if (currentTime - lastWarningTime > 5000L) { // 5 second repetition
+                assistantManager.speakText("You are in high risk zone, please drive slowly")
+                lastWarningTime = currentTime
             }
         }
     }
@@ -139,7 +173,8 @@ fun HomeScreen(
             try {
                 val apiZones = api.getAccidentZones().body() ?: emptyList()
                 val assetZones = loadRiskZonesFromAssets(context)
-                zones = (apiZones + assetZones).distinctBy { "${it.lat},${it.lng}" }
+                // Stable deduplication
+                zones = (apiZones + assetZones).distinctBy { "${it.name}${it.lat}${it.lng}" }
             } catch (e: Exception) {
                 zones = loadRiskZonesFromAssets(context)
             }
@@ -160,7 +195,7 @@ fun HomeScreen(
     )
 
     Box(
-        modifier = Modifier.fillMaxSize().background(lightBackground)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         // Tactical Background Layer
         TacticalGrid()
@@ -183,8 +218,6 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text("DualShield AI", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
-                        if (userName.isNotBlank() && userName != "User")
-                            Text("Guardian Active • $userName", color = AccentBlueLight, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 BackendStatusChip(backendOnline)
@@ -304,6 +337,7 @@ fun HomeScreen(
                 isSharing = locationShared,
                 onShareToggle = { locationShared = it },
                 zones = zones,
+                onCenterRequest = centerOnUser,
                 onCopyLink = {
                     val lat = gpsLat ?: 28.6139
                     val lng = gpsLng ?: 77.2090
@@ -316,7 +350,7 @@ fun HomeScreen(
             
             if (clipboardMsg.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(clipboardMsg, color = AccentGreen, fontSize = 12.sp)
+                Text(clipboardMsg, color = sentinelGreen, fontSize = 12.sp)
                 LaunchedEffect(clipboardMsg) {
                     delay(2500)
                     clipboardMsg = ""
@@ -325,46 +359,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Recent Incidents (Glassmorphic)
-            SentinelCard(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("MISSION LOGS", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                        TextButton(onClick = onNavigateToHistory) {
-                            Text("HISTORY", color = sentinelGlowBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(20.dp))
-                    if (incidentList.isEmpty()) {
-                        InsightItem(true, "Autonomous Vigilance", "Everything is clear, Guardian.")
-                        Spacer(modifier = Modifier.height(16.dp))
-                        InsightItem(false, "GPS Precision", "High-fidelity lock maintained.")
-                    } else {
-                        incidentList.take(3).forEachIndexed { i, item ->
-                            InsightItem(i == 0, "Incident #${item.userId.take(4)}", "Severity Level ${item.severityLevel} • ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(item.timestamp))}")
-                            if (i < minOf(incidentList.size - 1, 2)) Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Final Action
-            Button(
-                onClick = { },
-                modifier = Modifier.fillMaxWidth(0.9f).height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = lightCard),
-                shape = RoundedCornerShape(100.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, lightBorder.copy(0.1f)),
-                elevation = ButtonDefaults.buttonElevation(2.dp)
-            ) {
-                Icon(Icons.Default.StopCircle, contentDescription = null, tint = AlertRedBright)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("PAUSE SENTINEL PROTECTION", fontWeight = FontWeight.Black, color = AlertRedBright, fontSize = 13.sp)
-            }
             
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -409,9 +404,9 @@ fun StatusCard(
 ) {
     Card(
         modifier = modifier.height(130.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(24.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, lightBorder),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.1f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp, pressedElevation = 4.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -431,10 +426,10 @@ fun StatusCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.Bottom) {
                         if (unit.isEmpty()) {
-                            Text(value, color = lightTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
+                            Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 20.sp)
                         } else {
-                            Text(value, color = lightTextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                            Text(" $unit", color = lightTextSecondary, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+                            Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                            Text(" $unit", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
                         }
                     }
                 }
@@ -470,6 +465,7 @@ fun LiveLocationCard(
     accuracy: String,
     isSharing: Boolean,
     onShareToggle: (Boolean) -> Unit,
+    onCenterRequest: () -> Unit,
     onCopyLink: () -> Unit,
     zones: List<com.team404.dualshield.api.Zone> = emptyList()
 ) {
@@ -481,31 +477,29 @@ fun LiveLocationCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp)
+                .height(200.dp)
                 .clip(RoundedCornerShape(20.dp))
         ) {
             if (hasGps) {
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
-                    properties = MapProperties(mapType = MapType.NORMAL),
+                    properties = MapProperties(
+                        mapType = MapType.NORMAL,
+                        isMyLocationEnabled = true
+                    ),
                     uiSettings = MapUiSettings(
                         zoomControlsEnabled = false,
-                        myLocationButtonEnabled = false, // We'll add our own custom one
+                        myLocationButtonEnabled = false,
                         scrollGesturesEnabled = true,
                         zoomGesturesEnabled = true,
                         tiltGesturesEnabled = false,
                         rotationGesturesEnabled = false
                     )
                 ) {
-                    Marker(
-                        state = rememberMarkerState(position = LatLng(lat!!, lng!!)),
-                        icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-                    )
-                    
-                    // Render High-Risk Zones only when zoomed in
-                    if (cameraPositionState.position.zoom > 12.5f) {
-                        zones.forEach { zone ->
+                    // Render High-Risk Zones (Always visible for safety)
+                    zones.forEach { zone ->
+                        key("${zone.lat},${zone.lng},${zone.name}") {
                             val zoneRisk = zone.risk ?: "Moderate"
                             val colorData = when (zoneRisk) {
                                 "Very High", "Extremely High" -> Pair(Color(0x66FF003C), Color(0xFFFF003C))
@@ -521,15 +515,6 @@ fun LiveLocationCard(
                                 strokeColor = colorData.second,
                                 strokeWidth = 2f
                             )
-                            Marker(
-                                state = rememberMarkerState(position = LatLng(zone.lat, zone.lng)),
-                                title = zone.name ?: "Restricted Area",
-                                icon = BitmapDescriptorFactory.defaultMarker(
-                                    if (zoneRisk == "Moderate") BitmapDescriptorFactory.HUE_YELLOW 
-                                    else BitmapDescriptorFactory.HUE_RED
-                                ),
-                                alpha = 0.7f
-                            )
                         }
                     }
                 }
@@ -542,7 +527,7 @@ fun LiveLocationCard(
                         .align(Alignment.BottomStart)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.White.copy(0.8f))
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(0.8f))
                             )
                         )
                 )
@@ -562,31 +547,30 @@ fun LiveLocationCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "LIVE SURVEILLANCE ACTIVE",
-                        color = lightTextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp
                     )
                 }
 
-                // HUD Overlay: My Location Button (Custom)
-                Surface(
+                // HUD Overlay: My Location Button (Google Maps Style)
+                Box(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .size(40.dp)
-                        .clickable { 
-                            // Re-center camera on user
-                        },
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color.White.copy(0.9f),
-                    shadowElevation = 4.dp
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 24.dp, end = 16.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    FloatingActionButton(
+                        onClick = { onCenterRequest() },
+                        modifier = Modifier.size(44.dp),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = sentinelBlue,
+                        shape = CircleShape,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+                    ) {
                         Icon(
                             Icons.Default.MyLocation,
-                            contentDescription = null,
-                            tint = Color.Black.copy(0.7f),
+                            contentDescription = "Center on me",
                             modifier = Modifier.size(20.dp)
                         )
                     }

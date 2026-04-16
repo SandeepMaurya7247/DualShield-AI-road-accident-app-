@@ -74,7 +74,8 @@ class EmergencyActivity : ComponentActivity() {
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // START LOUD ALARM SOUND
+        // START LOUD ALARM SOUND (Disabled by User Request)
+        /*
         try {
             val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) 
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
@@ -88,6 +89,7 @@ class EmergencyActivity : ComponentActivity() {
         } catch (e: Exception) {
             Log.e("EmergencyActivity", "Failed to play alarm: ${e.message}")
         }
+        */
 
         // START VIBRATION
         try {
@@ -138,22 +140,14 @@ class EmergencyActivity : ComponentActivity() {
             override fun onBufferReceived(buffer: ByteArray?) {}
             override fun onEndOfSpeech() {}
             override fun onError(error: Int) {
-                if (isListening) {
-                    activityScope.launch {
-                        delay(500L)
-                        startListening()
-                    }
-                } else {
-                    // Restore alarm volume if error occurs and we stop listening
-                    mediaPlayer?.setVolume(1.0f, 1.0f)
-                }
+                if (isListening) startListening()
             }
             override fun onResults(results: Bundle?) {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (matches != null) {
                     for (result in matches) {
                         val word = result.lowercase()
-                        if (word.contains("yes") || word.contains("safe") || word.contains("haan")) {
+                        if (word.contains("yes") || word.contains("safe") || word.contains("haan") || word.contains("thik")) {
                             Log.d("EmergencyActivity", "Voice Cancel Detected: $word")
                             handleVoiceCancel()
                             return
@@ -192,13 +186,13 @@ class EmergencyActivity : ComponentActivity() {
                 putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
             }
             isListening = true
-            mediaPlayer?.setVolume(0.1f, 0.1f) // Duck volume while listening
+            // mediaPlayer?.setVolume(0.1f, 0.1f) // Duck volume while listening
             speechRecognizer?.startListening(intent)
         }
     }
 
     fun speakPrompt() {
-        mediaPlayer?.setVolume(0.1f, 0.1f) // Duck alarm volume
+        // mediaPlayer?.setVolume(0.1f, 0.1f) // Duck alarm volume
         tts?.speak("Emergency detected. Are you safe? Please say Yes to cancel the alert.", TextToSpeech.QUEUE_FLUSH, null, "prompt")
         activityScope.launch {
             delay(2500) // Wait for TTS to finish speaking

@@ -44,10 +44,7 @@ import com.team404.dualshield.api.Zone
 fun AdvancedHubScreen(
     onNavigateBack: () -> Unit,
     onNavigateToStatus: () -> Unit,
-    onNavigateToSensors: () -> Unit,
-    onNavigateToModel: () -> Unit,
-    onNavigateToSosProtocol: () -> Unit,
-    onNavigateToGeofence: () -> Unit
+    onNavigateToSensors: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -75,23 +72,7 @@ fun AdvancedHubScreen(
             
             AdvancedCard("📱 System Diagnostics", "Service status and permission registry", onNavigateToStatus)
             AdvancedCard("📊 Sensor Telemetry", "High-frequency accel/gyro stream", onNavigateToSensors)
-            AdvancedCard("🧠 AI Model Metrics", "Impact heuristics and detect logic", onNavigateToModel)
-            AdvancedCard("🚨 SOS Sandbox", "Trigger test protocol without alerts", onNavigateToSosProtocol)
-            AdvancedCard("🗺️ Geofence Registry", "Database of known high-risk zones", onNavigateToGeofence)
             
-            Spacer(modifier = Modifier.height(24.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("These tools are for engineering and diagnostic purposes. Handle with care.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                }
-            }
         }
     }
 }
@@ -336,162 +317,6 @@ fun HistoryItemCard(item: IncidentItem) {
             Column(horizontalAlignment = Alignment.End) {
                 Text("SEV ${item.severityLevel}", color = sentinelRed, fontWeight = FontWeight.Black, fontSize = 14.sp)
                 Text("%.3f, %.3f".format(item.latitude, item.longitude), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), fontSize = 10.sp)
-            }
-        }
-    }
-}
-
-// ── 4. ML Model Status ───────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MlModelStatusScreen(onBack: () -> Unit) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("AI Analytics", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            TacticalGrid(gridColor = sentinelGreen.copy(alpha = 0.05f))
-            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
-                Text("HEURISTIC ENGINE", color = sentinelGreen, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                DiagnosticStatCard("Detection Threshold", "2.5G Severe Impact")
-                DiagnosticStatCard("Inference Mode", "Streaming Heuristics")
-                DiagnosticStatCard("Feature Extraction", "XYZ-Delta magnitude")
-                DiagnosticStatCard("AI Confidence", "98.4%")
-
-                Spacer(modifier = Modifier.height(32.dp))
-                Text("SENSITIVITY TUNING", color = sentinelGreen, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                SentinelCard {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("Impact Sensitivity: High", color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("The AI triggers the SOS protocol when the resultant G-force vector exceeds 2.5G.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DiagnosticStatCard(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-        Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Black)
-    }
-}
-
-// ── 5. Geofencing Manager ────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun GeofencingManagerScreen(onBack: () -> Unit) {
-    val api = remember { BackendApi.create() }
-    var zones by remember { mutableStateOf<List<Zone>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        isLoading = true
-        scope.launch {
-            try {
-                val resp = api.getAccidentZones()
-                zones = resp.body() ?: emptyList()
-            } catch (e: Exception) { }
-            finally { isLoading = false }
-        }
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Geofence Registry", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            TacticalGrid(gridColor = sentinelBlue.copy(alpha = 0.05f))
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = sentinelBlue)
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    item {
-                        Text("ACTIVE HIGH-RISK ZONES", color = sentinelBlue, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    }
-                    items(zones) { zone ->
-                        SentinelCard {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(zone.name, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("LAT: ${zone.lat} • LNG: ${zone.lng}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                                Text("RADIUS: ${zone.radius} meters", color = sentinelBlue.copy(0.5f), fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── 6. SOS Protocol Sandbox ──────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SosProtocolScreen(onBack: () -> Unit) {
-    var testing by remember { mutableStateOf(false) }
-    
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("SOS Sandbox", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            TacticalGrid(gridColor = sentinelRed.copy(alpha = 0.05f))
-            Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Icon(Icons.Default.BugReport, contentDescription = null, tint = sentinelBlue, modifier = Modifier.size(64.dp))
-                Spacer(modifier = Modifier.height(24.dp))
-                Text("Diagnostic Sandbox", color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                Text("Use this to test speech prompts and timers without dispatching real SMS alerts to relatives.", color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, fontSize = 13.sp)
-                
-                Spacer(modifier = Modifier.height(48.dp))
-                
-                Button(
-                    onClick = { testing = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = sentinelBlue),
-                    shape = RoundedCornerShape(100.dp)
-                ) {
-                    Text(if (testing) "SANDBOX RUNNING..." else "START SANDBOX TEST", fontWeight = FontWeight.Black)
-                }
-                
-                if (testing) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape), color = sentinelGreen, trackColor = MaterialTheme.colorScheme.surfaceVariant)
-                    LaunchedEffect(Unit) {
-                        delay(5000)
-                        testing = false
-                    }
-                }
             }
         }
     }

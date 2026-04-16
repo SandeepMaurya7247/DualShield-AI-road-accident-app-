@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/dualshield_db';
 
 // Fallback logic for in-memory JSON (Local only)
@@ -34,16 +34,18 @@ function saveFallbackStore() {
 }
 
 // Connect to MongoDB
-mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 })
+mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
     .then(() => {
         isDbConnected = true;
         const dbName = mongoose.connection.name;
-        console.log(`MongoDB connected successfully to database: "${dbName}"`);
+        console.log(`[DATABASE] Success! Connected to MongoDB: "${dbName}"`);
     })
     .catch((err) => {
         isDbConnected = false;
         loadFallbackStore();
-        console.log("MongoDB connection failed, using local IN-MEMORY fallback.", err.message);
+        console.log(`[DATABASE] WARNING: Connection to ${mongoUri} failed.`);
+        console.log(`[DATABASE] Using local file fallback: ${FALLBACK_FILE}`);
+        console.log(`[DATABASE] Error Reason: ${err.message}`);
     });
 
 // Mongoose Models
@@ -90,24 +92,43 @@ app.get('/health', (req, res) => {
 // ── Auth ──
 app.post('/api/users/register', async (req, res) => {
     try {
-        const { name, phone } = req.body;
-        console.log(`[AUTH] Registration request received: ${name} (${phone})`);
+        const { name, phone, emergency_name, emergency_phone } = req.body;
+        console.log(`[AUTH] Registration request: ${name} (${phone})`);
         if (!phone) return res.status(400).json({ error: 'phone is required' });
         
         let uid = phone;
         if (isDbConnected) {
+            const upData = { 
+                phone, 
+                name,
+                emergency_contacts: [] 
+            };
+            if (emergency_name || emergency_phone) {
+                upData.emergency_contacts = [{
+                    contact_name: emergency_name || "Emergency",
+                    contact_phone: emergency_phone || "",
+                    relation: "Guardian"
+                }];
+            }
+
             const user = await User.findOneAndUpdate(
                 { phone: phone },
-                { $set: { phone, name } },
+                { $set: upData },
                 { new: true, upsert: true }
             );
             uid = user._id;
         } else {
-            fallbackStore.users[phone] = { phone, name };
+            fallbackStore.users[phone] = { 
+                phone, 
+                name,
+                emergency_name: emergency_name || "",
+                emergency_phone: emergency_phone || ""
+            };
             saveFallbackStore();
         }
         res.status(201).json({ status: 'success', user_id: uid, name, phone });
     } catch (e) {
+        console.error("[AUTH] Registration error:", e.message);
         res.status(500).json({ error: e.message });
     }
 });
@@ -203,9 +224,46 @@ app.get('/api/geofences/accident-zones', async (req, res) => {
         
         if (zones.length === 0) {
             zones = [
-                {"name": "NH-8 High Risk Curve", "lat": 28.4595, "lng": 77.0266, "radius": 500, "risk": "Very High"},
-                {"name": "Accident Prone Intersection", "lat": 28.6139, "lng": 77.2090, "radius": 300, "risk": "High"},
-                {"name": "Highway Blind Spot", "lat": 28.5355, "lng": 77.3910, "radius": 400, "risk": "Moderate"}
+  {"name":"MP Nagar","lat":23.2330,"lng":77.4320,"radius":200,"risk":"High"},
+  {"name":"New Market TT Nagar","lat":23.2280,"lng":77.4080,"radius":200,"risk":"Very High"},
+  {"name":"Board Office Square","lat":23.2305,"lng":77.4317,"radius":200,"risk":"High"},
+  {"name":"Rani Kamlapati Station","lat":23.2333,"lng":77.4370,"radius":200,"risk":"Very High"},
+  {"name":"Habibganj Naka","lat":23.2290,"lng":77.4400,"radius":200,"risk":"High"},
+  {"name":"Kolar Road","lat":23.2150,"lng":77.4500,"radius":200,"risk":"Very High"},
+  {"name":"Kolar Dam","lat":23.1500,"lng":77.3800,"radius":200,"risk":"Moderate"},
+  {"name":"Sarvdharm Colony","lat":23.2200,"lng":77.4550,"radius":200,"risk":"High"},
+  {"name":"Bima Kunj","lat":23.2250,"lng":77.4600,"radius":200,"risk":"Moderate"},
+  {"name":"Danish Nagar","lat":23.2100,"lng":77.4600,"radius":200,"risk":"High"},
+  {"name":"Neelbad","lat":23.193409,"lng":77.343359,"radius":200,"risk":"High"},
+  {"name":"Ratibad","lat":23.169909,"lng":77.321277,"radius":200,"risk":"High"},
+  {"name":"Kerwa Dam Road","lat":23.2800,"lng":77.2600,"radius":200,"risk":"Moderate"},
+  {"name":"Kaliasot Dam","lat":23.2700,"lng":77.3000,"radius":200,"risk":"Moderate"},
+  {"name":"Bhadbhada Dam","lat":23.2069,"lng":77.2298,"radius":200,"risk":"High"},
+  {"name":"Lalghati Square","lat":23.2660,"lng":77.3800,"radius":200,"risk":"Moderate"},
+  {"name":"VIP Road","lat":23.2500,"lng":77.3600,"radius":200,"risk":"High"},
+  {"name":"Airport Road","lat":23.2900,"lng":77.3500,"radius":200,"risk":"High"},
+  {"name":"Gandhi Nagar","lat":23.3000,"lng":77.3600,"radius":200,"risk":"Moderate"},
+  {"name":"Bairagarh","lat":23.2800,"lng":77.3300,"radius":200,"risk":"High"},
+  {"name":"Prabhat Square","lat":23.2521,"lng":77.4308,"radius":200,"risk":"Very High"},
+  {"name":"Govindpura","lat":23.2500,"lng":77.4400,"radius":200,"risk":"Very High"},
+  {"name":"Piplani","lat":23.2600,"lng":77.4500,"radius":200,"risk":"High"},
+  {"name":"Indrapuri","lat":23.2800,"lng":77.4600,"radius":200,"risk":"High"},
+  {"name":"Ayodhya Nagar","lat":23.2700,"lng":77.4700,"radius":200,"risk":"High"},
+  {"name":"Karond","lat":23.3000,"lng":77.4200,"radius":200,"risk":"Extremely High"},
+  {"name":"Bhanpur","lat":23.3100,"lng":77.4300,"radius":200,"risk":"High"},
+  {"name":"Narela Shankari","lat":23.3200,"lng":77.4400,"radius":200,"risk":"High"},
+  {"name":"Ayodhya Bypass","lat":23.2900,"lng":77.4500,"radius":200,"risk":"Extremely High"},
+  {"name":"Raisen Road","lat":23.2600,"lng":77.4700,"radius":200,"risk":"Extremely High"},
+  {"name":"MISROD","lat":23.2000,"lng":77.5000,"radius":200,"risk":"Very High"},
+  {"name":"Mandideep Highway","lat":23.1500,"lng":77.5200,"radius":200,"risk":"High"},
+  {"name":"Hoshangabad Road","lat":23.2200,"lng":77.4800,"radius":200,"risk":"Extremely High"},
+  {"name":"AIIMS Bhopal","lat":23.2100,"lng":77.4800,"radius":200,"risk":"High"},
+  {"name":"Bagsewania","lat":23.2300,"lng":77.4900,"radius":200,"risk":"High"},
+  {"name":"Chowk Bazaar","lat":23.2600,"lng":77.4000,"radius":200,"risk":"Very High"},
+  {"name":"Royal Market","lat":23.2550,"lng":77.4100,"radius":200,"risk":"High"},
+  {"name":"Peer Gate","lat":23.2500,"lng":77.4050,"radius":200,"risk":"Very High"},
+  {"name":"Itwara","lat":23.2700,"lng":77.4100,"radius":200,"risk":"High"},
+  {"name":"Budhwara","lat":23.2650,"lng":77.4150,"radius":200,"risk":"High"}
             ];
         }
         res.status(200).json(zones);

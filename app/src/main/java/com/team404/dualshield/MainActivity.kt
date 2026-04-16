@@ -23,9 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import com.team404.dualshield.services.SensorMonitoringService
 import com.team404.dualshield.ui.navigation.DualShieldNavGraph
 import com.team404.dualshield.ui.theme.DualShieldTheme
+import com.team404.dualshield.api.UserSession
 
 class MainActivity : ComponentActivity() {
 
@@ -86,14 +89,18 @@ class MainActivity : ComponentActivity() {
         checkOverlayPermission() // Ask for "Appear on top" permission
 
         setContent {
-            DualShieldTheme {
+            val themeMode = "SYSTEM"
+            
+            DualShieldTheme(themeMode = themeMode) {
                 val navController = rememberNavController()
                 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    DualShieldNavGraph(navController = navController)
+                    DualShieldNavGraph(
+                        navController = navController
+                    )
                 }
             }
         }

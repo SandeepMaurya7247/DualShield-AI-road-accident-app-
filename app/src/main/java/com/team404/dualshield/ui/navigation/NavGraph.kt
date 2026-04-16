@@ -2,14 +2,21 @@
 package com.team404.dualshield.ui.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -25,7 +32,9 @@ import kotlinx.coroutines.launch
 import com.team404.dualshield.ui.theme.*
 
 @Composable
-fun DualShieldNavGraph(navController: NavHostController = rememberNavController()) {
+fun DualShieldNavGraph(
+    navController: NavHostController = rememberNavController()
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val emergencyManager = remember { EmergencyManager(context) }
@@ -35,7 +44,7 @@ fun DualShieldNavGraph(navController: NavHostController = rememberNavController(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute in listOf("home", "map", "contacts", "settings")
+    val showBottomBar = currentRoute in listOf("home", "map", "profile")
 
     Scaffold(
         bottomBar = {
@@ -100,11 +109,24 @@ fun DualShieldNavGraph(navController: NavHostController = rememberNavController(
                         }
                     )
                 }
-                // ── Advanced Routes ──────────────────────────────────────────
-                composable("settings") {
+                // ── User Profile Route (Container for Settings & Contacts) ──
+                composable("profile") {
+                     var emAlerts by remember { mutableStateOf<Boolean>(UserSession.isEmergencyAlertsEnabled(context)) }
+                     var beSync by remember { mutableStateOf<Boolean>(UserSession.isBackendSyncEnabled(context)) }
+
                      SettingsScreen(
                         userName = UserSession.getName(context),
                         userPhone = UserSession.getPhone(context),
+                        emergencyAlerts = emAlerts,
+                        onEmergencyAlertsChange = { 
+                            emAlerts = it
+                            UserSession.setEmergencyAlerts(context, it)
+                        },
+                        backendSync = beSync,
+                        onBackendSyncChange = {
+                            beSync = it
+                            UserSession.setBackendSync(context, it)
+                        },
                         onBack = { navController.popBackStack() },
                         onLogout = {
                             UserSession.clear(context)
@@ -112,24 +134,20 @@ fun DualShieldNavGraph(navController: NavHostController = rememberNavController(
                                 popUpTo("home") { inclusive = true }
                             }
                         },
-                        onNavigateToAdvanced = { navController.navigate("advanced_hub") }
+                        onNavigateToAdvanced = { navController.navigate("advanced_hub") },
+                        onNavigateToContacts = { navController.navigate("contacts") },
+                        onNavigateToHistory = { navController.navigate("history") }
                     )
                 }
                 composable("advanced_hub") {
                     AdvancedHubScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToStatus = { navController.navigate("system_status") },
-                        onNavigateToSensors = { navController.navigate("sensors") },
-                        onNavigateToModel = { navController.navigate("ml_model") },
-                        onNavigateToSosProtocol = { navController.navigate("sos_sandbox") },
-                        onNavigateToGeofence = { navController.navigate("geofence_registry") }
+                        onNavigateToSensors = { navController.navigate("sensors") }
                     )
                 }
                 composable("system_status") { SystemStatusScreen(onBack = { navController.popBackStack() }) }
                 composable("sensors") { SensorMonitorScreen(onBack = { navController.popBackStack() }) }
-                composable("ml_model") { MlModelStatusScreen(onBack = { navController.popBackStack() }) }
-                composable("sos_sandbox") { SosProtocolScreen(onBack = { navController.popBackStack() }) }
-                composable("geofence_registry") { GeofencingManagerScreen(onBack = { navController.popBackStack() }) }
             }
         }
     }
@@ -140,63 +158,63 @@ fun CustomBottomNavigation(
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        tonalElevation = 8.dp,
-        modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(62.dp)
+            .drawBehind {
+                val strokeWidth = 1.dp.toPx()
+                drawLine(
+                    color = Color.LightGray.copy(alpha = 0.2f),
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                    strokeWidth = strokeWidth
+                )
+            }
     ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Dashboard, contentDescription = "Home") },
-            label = { Text("HOME") },
-            selected = currentRoute == "home",
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onBackground,
-                selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            onClick = { onNavigate("home") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Explore, contentDescription = "Map") }, // Close enough icon to map pin/compass
-            label = { Text("MAP") },
-            selected = currentRoute == "map",
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onBackground,
-                selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            onClick = { onNavigate("map") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Group, contentDescription = "Contacts") },
-            label = { Text("CONTACTS") },
-            selected = currentRoute == "contacts",
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onBackground,
-                selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            onClick = { onNavigate("contacts") }
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-            label = { Text("SETTINGS") },
-            selected = currentRoute == "settings",
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.onBackground,
-                selectedTextColor = MaterialTheme.colorScheme.onBackground,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            onClick = { onNavigate("settings") }
-        )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val items = listOf(
+                Triple("home", Icons.Default.Home, "HOME"),
+                Triple("map", Icons.Default.Map, "MAP"),
+                Triple("profile", Icons.Default.Person, "PROFILE")
+            )
+
+            items.forEach { (route, icon, label) ->
+                val isSelected = currentRoute == route
+                val color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = { onNavigate(route) }
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = label,
+                        tint = color,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = label,
+                        color = color,
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                }
+            }
+        }
     }
 }

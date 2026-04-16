@@ -33,6 +33,11 @@ class EmergencyManager(private val context: Context) {
     private val api = BackendApi.create()
 
     suspend fun dispatchSOS(contactPhones: List<String>, userId: String) {
+        if (!com.team404.dualshield.api.UserSession.isEmergencyAlertsEnabled(context)) {
+            Log.d("EmergencyManager", "SOS Dispatch aborted: Emergency Alerts are DISABLED in settings.")
+            return
+        }
+
         if (isSosInProgress) {
             Log.w("EmergencyManager", "SOS Dispatch already in progress. Skipping duplicate.")
             return
@@ -48,20 +53,24 @@ class EmergencyManager(private val context: Context) {
             val (lat, lng) = if (location != null) Pair(location.latitude, location.longitude) else Pair(28.6139, 77.2090)
             
             // 1. Report to Backend
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    api.reportIncident(
-                        IncidentReport(
-                            userId = userId,
-                            latitude = lat,
-                            longitude = lng,
-                            severityLevel = 3,
-                            timestamp = System.currentTimeMillis()
+            if (com.team404.dualshield.api.UserSession.isBackendSyncEnabled(context)) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        api.reportIncident(
+                            IncidentReport(
+                                userId = userId,
+                                latitude = lat,
+                                longitude = lng,
+                                severityLevel = 3,
+                                timestamp = System.currentTimeMillis()
+                            )
                         )
-                    )
-                } catch (e: Exception) {
-                    Log.e("EmergencyManager", "Backend report failed: ${e.message}")
+                    } catch (e: Exception) {
+                        Log.e("EmergencyManager", "Backend report failed: ${e.message}")
+                    }
                 }
+            } else {
+                Log.d("EmergencyManager", "Backend Sync disabled. Skipping cloud report.")
             }
 
             // 2. Send SMS

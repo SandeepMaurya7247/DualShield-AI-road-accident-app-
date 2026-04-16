@@ -41,8 +41,26 @@ class SpeechAssistantManager(
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.e("AI_Assistant", "TTS Language not supported")
             } else {
+                // Try to find a premium female voice
+                try {
+                    val voices = tts?.getVoices()
+                    val femaleVoice = voices?.find { 
+                        it.name.contains("female", ignoreCase = true) || 
+                        it.name.contains("en-us-x-sfg", ignoreCase = true) // Common Google female voice
+                    }
+                    if (femaleVoice != null) {
+                        tts?.setVoice(femaleVoice)
+                        Log.d("AI_Assistant", "Selected Voice: ${femaleVoice.name}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("AI_Assistant", "Error setting custom voice: ${e.message}")
+                }
+
+                tts?.setPitch(1.1f) // Slightly higher pitch for clarity
+                tts?.setSpeechRate(1.0f)
+                
                 isTtsReady = true
-                Log.d("AI_Assistant", "TTS Ready")
+                Log.d("AI_Assistant", "TTS Ready (Enhanced Voice)")
                 onReady() // Notify UI that we are ready to speak
             }
         } else {

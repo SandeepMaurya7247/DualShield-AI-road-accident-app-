@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.key
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,8 @@ import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @androidx.compose.ui.ExperimentalComposeUiApi
 @SuppressLint("MissingPermission", "SetJavaScriptEnabled")
@@ -93,8 +96,9 @@ fun MapScreen() {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val bhopal = LatLng(23.2599, 77.4126)
+    val midPoint = LatLng(23.2500, 77.3500) // Near Neelbad/Central
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(bhopal, 12f)
+        position = CameraPosition.fromLatLngZoom(midPoint, 11f)
     }
 
     val onSearchDestination = {
@@ -102,28 +106,26 @@ fun MapScreen() {
             scope.launch {
                 keyboardController?.hide()
                 try {
-                    val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
-                    val key = ai.metaData.getString("com.google.android.geo.API_KEY")
-                    val query = java.net.URLEncoder.encode(destinationText, "UTF-8")
-                    val geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json?address=$query&key=$key"
-                    var apiStatusMsg = ""
+                    // ── Nominatim Geocoding (Prioritize Bhopal) ─────────────────────────
+                    val refinedQuery = if (destinationText.lowercase().contains("bhopal")) {
+                        destinationText
+                    } else {
+                        "$destinationText, Bhopal"
+                    }
+                    val query = java.net.URLEncoder.encode(refinedQuery, "UTF-8")
+                    val geocodeUrl = "https://nominatim.openstreetmap.org/search?q=$query&format=json&limit=1&countrycodes=in"
                     
                     val target = withContext(Dispatchers.IO) {
                         try {
-                            val response = java.net.URL(geocodeUrl).readText()
-                            val json = org.json.JSONObject(response)
-                            if (json.has("status") && json.getString("status") != "OK") {
-                                apiStatusMsg = json.optString("error_message", json.getString("status"))
-                            }
-                            val results = json.optJSONArray("results")
-                            if (results != null && results.length() > 0) {
-                                val loc = results.getJSONObject(0).getJSONObject("geometry").getJSONObject("location")
-                                LatLng(loc.getDouble("lat"), loc.getDouble("lng"))
+                            val conn = java.net.URL(geocodeUrl).openConnection() as java.net.HttpURLConnection
+                            conn.setRequestProperty("User-Agent", "DualShieldAI/1.0")
+                            val response = conn.inputStream.bufferedReader().readText()
+                            val results = org.json.JSONArray(response)
+                            if (results.length() > 0) {
+                                val first = results.getJSONObject(0)
+                                LatLng(first.getDouble("lat"), first.getDouble("lon"))
                             } else null
-                        } catch (e: Exception) { 
-                            apiStatusMsg = e.message ?: "Network error"
-                            null 
-                        }
+                        } catch (e: Exception) { null }
                     }
 
                     if (target != null) {
@@ -131,35 +133,36 @@ fun MapScreen() {
                         cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(target, 14f))
 
                         if (userLat != null && userLng != null) {
-                           withContext(Dispatchers.IO) {
-                               try {
-                                   val urlString = "https://maps.googleapis.com/maps/api/directions/json?origin=${userLat},${userLng}&destination=${target.latitude},${target.longitude}&key=$key"
-                                   val response = java.net.URL(urlString).readText()
-                                   val json = org.json.JSONObject(response)
-                                   val routes = json.optJSONArray("routes")
-                                   if (routes != null && routes.length() > 0) {
-                                       val polyline = routes.getJSONObject(0).getJSONObject("overview_polyline").getString("points")
-                                       routePoints = decodePolyline(polyline)
-                                   } else {
-                                       val dirStatus = json.optString("status", "UNKNOWN")
-                                       val errMsg = json.optString("error_message", dirStatus)
-                                       withContext(Dispatchers.Main) {
-                                           android.widget.Toast.makeText(context, "Directions Error: $errMsg", android.widget.Toast.LENGTH_LONG).show()
-                                       }
-                                   }
-                               } catch (e: Exception) {
-                                   withContext(Dispatchers.Main) {
-                                       android.widget.Toast.makeText(context, "Directions failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-                                   }
-                               }
-                           }
+                            withContext(Dispatchers.IO) {
+                                try {
+                                    // ── OSRM Routing (FREE Directions) ───────────────────────
+                                    val urlString = "http://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${target.longitude},${target.latitude}?overview=full&geometries=geojson"
+                                    val conn = java.net.URL(urlString).openConnection() as java.net.HttpURLConnection
+                                    conn.setRequestProperty("User-Agent", "DualShieldAI/1.0")
+                                    val response = conn.inputStream.bufferedReader().readText()
+                                    val json = org.json.JSONObject(response)
+                                    val routes = json.getJSONArray("routes")
+                                    if (routes.length() > 0) {
+                                        val route = routes.getJSONObject(0)
+                                        val geometry = route.getJSONObject("geometry")
+                                        val coords = geometry.getJSONArray("coordinates")
+                                        val points = mutableListOf<LatLng>()
+                                        for (i in 0 until coords.length()) {
+                                            val point = coords.getJSONArray(i)
+                                            // OSRM returns [longitude, latitude]
+                                            points.add(LatLng(point.getDouble(1), point.getDouble(0)))
+                                        }
+                                        routePoints = points
+                                    }
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) { 
+                                        android.widget.Toast.makeText(context, "Routing failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
                         }
                     } else {
-                        if (apiStatusMsg.isNotEmpty()) {
-                            android.widget.Toast.makeText(context, "Google API Error: $apiStatusMsg", android.widget.Toast.LENGTH_LONG).show()
-                        } else {
-                            android.widget.Toast.makeText(context, "Location completely not found!", android.widget.Toast.LENGTH_SHORT).show()
-                        }
+                        android.widget.Toast.makeText(context, "Location not found on OSM!", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } catch(e:Exception){
                     android.widget.Toast.makeText(context, "Search failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
@@ -172,18 +175,15 @@ fun MapScreen() {
         if (userLat != null && userLng != null) {
             delay(3000L) // debounce
             try {
-                val ai = context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA)
-                val key = ai.metaData.getString("com.google.android.geo.API_KEY")
-                val geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json?latlng=${userLat!!},${userLng!!}&key=$key"
-                
+                // ── Nominatim Reverse Geocoding (FREE Location Name) ────────────────
+                val reverseUrl = "https://nominatim.openstreetmap.org/reverse?lat=$userLat&lon=$userLng&format=json"
                 val address = withContext(Dispatchers.IO) {
                     try {
-                        val response = java.net.URL(geocodeUrl).readText()
+                        val conn = java.net.URL(reverseUrl).openConnection() as java.net.HttpURLConnection
+                        conn.setRequestProperty("User-Agent", "DualShieldAI/1.0")
+                        val response = conn.inputStream.bufferedReader().readText()
                         val json = org.json.JSONObject(response)
-                        val results = json.optJSONArray("results")
-                        if (results != null && results.length() > 0) {
-                            results.getJSONObject(0).getString("formatted_address")
-                        } else null
+                        json.optString("display_name", "Current Location")
                     } catch (e: Exception) { null }
                 }
                 if (address != null) {
@@ -260,9 +260,17 @@ fun MapScreen() {
             try {
                 val apiZones = api.getAccidentZones().body() ?: emptyList()
                 val assetZones = loadRiskZonesFromAssets(context)
-                zones = (apiZones + assetZones).distinctBy { "${it.lat},${it.lng}" }
+                // Deduplicate by name and coordinates
+                zones = (apiZones + assetZones).distinctBy { "${it.name}${it.lat}${it.lng}" }
+                zones.forEach { android.util.Log.d("MapScreen", "Loaded Zone: ${it.name}") }
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "Loaded ${zones.size} Accident Zones", android.widget.Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 zones = loadRiskZonesFromAssets(context)
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "Loaded ${zones.size} Zones (Assets Only)", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -291,59 +299,47 @@ fun MapScreen() {
                 cameraPositionState = cameraPositionState,
                 properties = MapProperties(
                     isMyLocationEnabled = true,
-                    mapType = MapType.NORMAL
+                    mapType = MapType.NORMAL,
+                    mapStyleOptions = if (isSystemInDarkTheme() || MaterialTheme.colorScheme.background.toArgb() == sentinelDark.toArgb()) {
+                        MapStyleOptions(MapTheme.DARK_JSON)
+                    } else null
                 ),
-                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
+                uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false)
             ) {
-                userLat?.let { lat -> userLng?.let { lng ->
-                    val userPosition = LatLng(lat, lng)
-                    val userMarkerState = rememberMarkerState(position = userPosition)
-                    Marker(state = userMarkerState, title = "You", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                    
-                    destinationLatLng?.let { target ->
-                        val destPosition = LatLng(target.latitude, target.longitude)
-                        val destMarkerState = rememberMarkerState(position = destPosition)
-                        Marker(state = destMarkerState, title = "Destination", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
-                        if (routePoints != null && routePoints!!.isNotEmpty()) {
-                            Polyline(points = routePoints!!, color = sentinelGlowBlue, width = 12f)
-                        } else {
-                            Polyline(points = listOf(userPosition, destPosition), color = sentinelGlowGreen, width = 8f)
-                        }
+                destinationLatLng?.let { target ->
+                    val destPosition = LatLng(target.latitude, target.longitude)
+                    val destMarkerState = rememberMarkerState(position = destPosition)
+                    Marker(state = destMarkerState, title = "Destination", icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                    if (routePoints != null && routePoints!!.isNotEmpty()) {
+                        Polyline(points = routePoints!!, color = sentinelGlowBlue, width = 12f)
+                    } else {
+                        userLat?.let { uLat -> userLng?.let { uLng ->
+                            Polyline(points = listOf(LatLng(uLat, uLng), destPosition), color = sentinelGlowGreen, width = 8f)
+                        } }
                     }
-                } }
+                }
                 zones.forEach { zone ->
-                    val zoneRisk = zone.risk ?: "Moderate"
-                    val colorData = when (zoneRisk) {
-                        "Very High", "Extremely High" -> Pair(Color(0x66FF003C), Color(0xFFFF003C))
-                        "High" -> Pair(Color(0x66FF9800), Color(0xFFE65100))
-                        "Moderate" -> Pair(Color(0x66FFEB3B), Color(0xFFFBC02D))
-                        else -> Pair(Color(0x4464748B), Color(0xFF64748B))
-                    }
-                    
-                    Circle(
-                        center = LatLng(zone.lat, zone.lng),
-                        radius = zone.radius.toDouble(),
-                        fillColor = colorData.first,
-                        strokeColor = colorData.second,
-                        strokeWidth = 3f
-                    )
-                    
-                    Marker(
-                        state = rememberMarkerState(position = LatLng(zone.lat, zone.lng)),
-                        title = zone.name ?: "Restricted Area",
-                        snippet = "Risk Level: $zoneRisk",
-                        icon = BitmapDescriptorFactory.defaultMarker(
-                            when (zoneRisk) {
-                                "Very High", "Extremely High" -> BitmapDescriptorFactory.HUE_RED
-                                "High" -> BitmapDescriptorFactory.HUE_ORANGE
-                                "Moderate" -> BitmapDescriptorFactory.HUE_YELLOW
-                                else -> BitmapDescriptorFactory.HUE_CYAN
-                            }
+                    key("${zone.lat},${zone.lng},${zone.name}") {
+                        val zoneRisk = zone.risk ?: "Moderate"
+                        val colorData = when (zoneRisk) {
+                            "Very High", "Extremely High" -> Pair(Color(0x66FF003C), Color(0xFFFF003C))
+                            "High" -> Pair(Color(0x66FF9800), Color(0xFFE65100))
+                            "Moderate" -> Pair(Color(0x66FFEB3B), Color(0xFFFBC02D))
+                            else -> Pair(Color(0x4464748B), Color(0xFF64748B))
+                        }
+                        
+                        Circle(
+                            center = LatLng(zone.lat, zone.lng),
+                            radius = zone.radius.toDouble(),
+                            fillColor = colorData.first,
+                            strokeColor = colorData.second,
+                            strokeWidth = 3f
                         )
-                    )
+                    }
                 }
             }
         } else {
+            val isDark = MaterialTheme.colorScheme.background.toArgb() == sentinelDark.toArgb()
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -354,7 +350,7 @@ fun MapScreen() {
                         webViewClient = WebViewClient()
                         val lat = userLat ?: 28.6139
                         val lng = userLng ?: 77.2090
-                        val html = buildLeafletHtml(lat, lng, zones)
+                        val html = buildLeafletHtml(lat, lng, zones, isDark)
                         loadDataWithBaseURL("https://openstreetmap.org", html, "text/html", "UTF-8", null)
                     }
                 }
@@ -368,8 +364,8 @@ fun MapScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = Color(0x1F000000))
-                    .background(Color.White, RoundedCornerShape(16.dp))
-                    .border(1.dp, lightBorder, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -393,36 +389,38 @@ fun MapScreen() {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
-                                .background(Color.White, RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                .height(52.dp)
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 12.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
                                 text = currentAddress ?: "Locating you...",
-                                color = Color(0xFF0F172A),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 14.sp,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                         
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         
                         // Destination text field wrapper
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
-                                .background(Color.White, RoundedCornerShape(8.dp))
-                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp)),
+                                .height(52.dp)
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             TextField(
                                 value = destinationText,
                                 onValueChange = { destinationText = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                placeholder = { Text("Where are you going?", color = Color(0xFF64748B), fontSize = 14.sp) },
+                                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+                                placeholder = { Text("Where are you going?", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp) },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = { onSearchDestination() }),
@@ -431,8 +429,9 @@ fun MapScreen() {
                                     unfocusedContainerColor = Color.Transparent,
                                     focusedIndicatorColor = Color.Transparent,
                                     unfocusedIndicatorColor = Color.Transparent,
-                                    focusedTextColor = Color(0xFF0F172A),
-                                    unfocusedTextColor = Color(0xFF0F172A)
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 ),
                                 trailingIcon = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -478,6 +477,45 @@ fun MapScreen() {
         }
 
         // ── HUD (Sentinel Style) ──────────────────────────────────────────────────
+        // --- NEW: Zone Visibility Aids ---
+        // --- NEW: Zone Visibility Aids ---        // 2. Zone Finder Menu (FAB)
+        var showZoneMenu by remember { mutableStateOf(false) }
+        
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 100.dp, end = 16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.End) {
+                if (showZoneMenu) {
+                    val quickLinks = zones.filter { 
+                        listOf("Neelbad", "Ratibad", "Bhadbhada", "Karond").any { key -> 
+                            it.name?.contains(key, ignoreCase = true) == true 
+                        }
+                    }
+                    quickLinks.forEach { targetZone ->
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                scope.launch {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(LatLng(targetZone.lat, targetZone.lng), 15f)
+                                    )
+                                    showZoneMenu = false
+                                }
+                            },
+                            icon = { Icon(Icons.Default.Place, null) },
+                            text = { Text(targetZone.name ?: "Zone") },
+                            containerColor = Color(0xFF3B82F6),
+                            contentColor = Color.White,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                }
+                
+            }
+        }
+        // --- END: Zone Visibility Aids ---
+
         MapHUD(
             speed = speedKmh,
             highRisk = isHighRisk,
@@ -511,26 +549,34 @@ fun DiagnosticRow(label: String, status: String, color: Color) {
 @Composable
 fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, currentAddress: String?, share: Boolean, onShareToggle: (Boolean) -> Unit, gpsReady: Boolean, onLocate: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
+        // My Location Button (Google Maps Style)
         FloatingActionButton(
             onClick = onLocate,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 180.dp).size(56.dp),
-            containerColor = Color.White,
-            contentColor = Color(0xFF3B82F6),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 150.dp) // Adjusted to be closer to the telemetry card
+                .size(48.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = sentinelBlue,
             shape = CircleShape,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
         ) { 
-            Icon(if (gpsReady) Icons.Default.MyLocation else Icons.Default.LocationSearching, contentDescription = null) 
+            Icon(
+                if (gpsReady) Icons.Default.MyLocation else Icons.Default.LocationSearching, 
+                contentDescription = "Center on me",
+                modifier = Modifier.size(24.dp)
+            ) 
         }
 
-        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp).padding(bottom = 70.dp)) {
+        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp).padding(bottom = 20.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0x1F000000))
-                    .background(Color.White, RoundedCornerShape(20.dp))
-                    .border(1.dp, Color(0x0C000000), RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(20.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -539,7 +585,7 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, currentAdd
                         Column {
                             Text(
                                 "Safety Telemetry", 
-                                color = Color(0xFF0F172A), 
+                                color = MaterialTheme.colorScheme.onSurface, 
                                 fontSize = 16.sp, 
                                 fontWeight = FontWeight.Bold
                             )
@@ -555,40 +601,18 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, currentAdd
                         Row(verticalAlignment = Alignment.CenterVertically) {
                            Text(
                                "$speed", 
-                               color = Color(0xFF0F172A), 
+                               color = MaterialTheme.colorScheme.onSurface, 
                                fontSize = 28.sp, 
                                fontWeight = FontWeight.Black
                            )
                            Text(
                                " km/h", 
-                               color = Color(0xFF64748B), 
+                               color = MaterialTheme.colorScheme.onSurfaceVariant, 
                                fontSize = 12.sp, 
                                fontWeight = FontWeight.Bold,
                                modifier = Modifier.padding(top = 8.dp)
                            )
                         }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0x11000000)))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(), 
-                        horizontalArrangement = Arrangement.SpaceBetween, 
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Share live location to Guardians", 
-                            color = Color(0xFF64748B), 
-                            fontSize = 14.sp, 
-                            fontWeight = FontWeight.Medium
-                        )
-                        Switch(
-                            checked = share, 
-                            onCheckedChange = onShareToggle, 
-                            colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF3B82F6))
-                        )
                     }
                 }
             }
@@ -596,10 +620,15 @@ fun MapHUD(speed: Int, highRisk: Boolean, lat: Double?, lng: Double?, currentAdd
     }
 }
 
-private fun buildLeafletHtml(lat: Double, lng: Double, zones: List<Zone>): String {
+private fun buildLeafletHtml(lat: Double, lng: Double, zones: List<Zone>, isDark: Boolean): String {
     val zonesJson = zones.joinToString(",", "[", "]") { z ->
         """{"lat":${z.lat},"lng":${z.lng},"radius":${z.radius},"name":"${z.name}"}"""
     }
+    
+    val bgColor = if (isDark) "#0A0A0B" else "#FFFFFF"
+    val tileFilter = if (isDark) "invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)" else "none"
+    val markerColor = if (isDark) "#34D399" else "#3B82F6"
+
     return """
     <!DOCTYPE html>
     <html>
@@ -608,11 +637,10 @@ private fun buildLeafletHtml(lat: Double, lng: Double, zones: List<Zone>): Strin
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <style>
-            body { margin: 0; background: #FFFFFF; }
-            #map { width: 100vw; height: 100vh; }
-            /* Light themed map filtering */
-            .leaflet-tile { }
-            .leaflet-container { background-color: #FFFFFF !important; }
+            body { margin: 0; background: $bgColor; }
+            #map { width: 100vw; height: 100vh; background: $bgColor; }
+            .leaflet-tile-container { filter: $tileFilter; }
+            .leaflet-container { background: $bgColor !important; }
         </style>
     </head>
     <body>
@@ -623,16 +651,19 @@ private fun buildLeafletHtml(lat: Double, lng: Double, zones: List<Zone>): Strin
             
             var userIcon = L.divIcon({
                 className: 'custom-div-icon',
-                html: "<div style='background-color:#3B82F6;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 15px #3B82F6;'></div>",
+                html: "<div style='background-color:$markerColor;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 15px $markerColor;'></div>",
                 iconSize: [12, 12], iconAnchor: [6, 6]
             });
             var marker = L.marker([$lat, $lng], {icon: userIcon}).addTo(map);
             
-            var zones = $zonesJson;
-            zones.forEach(function(z) {
+            var zonesData = $zonesJson;
+            zonesData.forEach(function(z) {
                 L.circle([z.lat, z.lng], {
                     radius: z.radius, color: '#EF4444', fillColor: '#EF4444', fillOpacity: 0.15, weight: 1
                 }).addTo(map);
+                
+                // Add marker to show "marks" in fallback view
+                L.marker([z.lat, z.lng]).addTo(map).bindPopup(z.name || "Risk Zone");
             });
 
             function updateLocation(lat, lng) {

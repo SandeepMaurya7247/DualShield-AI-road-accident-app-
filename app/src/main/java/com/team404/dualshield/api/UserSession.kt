@@ -13,6 +13,10 @@ object UserSession {
     private const val KEY_NAME = "name"
     private const val KEY_PHONE = "phone"
     private const val KEY_LOGGED_IN = "logged_in"
+    private const val KEY_THEME_MODE = "theme_mode" // SYSTEM, LIGHT, DARK
+    private const val KEY_EMERGENCY_ALERTS = "emergency_alerts"
+    private const val KEY_BACKEND_SYNC = "backend_sync"
+    private const val KEY_DATA_PRIVACY = "data_privacy"
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -51,4 +55,26 @@ object UserSession {
     fun getContactsLocal(context: Context): String {
         return prefs(context).getString(KEY_CONTACTS, "[]") ?: "[]"
     }
+
+    fun saveThemeMode(context: Context, mode: String) {
+        prefs(context).edit().putString(KEY_THEME_MODE, mode).apply()
+    }
+
+    fun updateName(context: Context, newName: String) {
+        prefs(context).edit().putString(KEY_NAME, newName).apply()
+    }
+
+    fun getThemeMode(context: Context): String {
+        return prefs(context).getString(KEY_THEME_MODE, "SYSTEM") ?: "SYSTEM"
+    }
+
+    // --- Persistence for Preferences ---
+    fun isEmergencyAlertsEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_EMERGENCY_ALERTS, true)
+    fun setEmergencyAlerts(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_EMERGENCY_ALERTS, enabled).apply()
+
+    fun isBackendSyncEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_BACKEND_SYNC, true)
+    fun setBackendSync(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_BACKEND_SYNC, enabled).apply()
+
+    fun isDataPrivacyEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_DATA_PRIVACY, true)
+    fun setDataPrivacy(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_DATA_PRIVACY, enabled).apply()
 }

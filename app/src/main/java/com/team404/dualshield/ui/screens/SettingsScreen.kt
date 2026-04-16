@@ -2,6 +2,7 @@ package com.team404.dualshield.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -10,116 +11,282 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.team404.dualshield.api.UserSession
 import com.team404.dualshield.ui.theme.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     userName: String,
     userPhone: String,
+    emergencyAlerts: Boolean = true,
+    onEmergencyAlertsChange: (Boolean) -> Unit = {},
+    backendSync: Boolean = true,
+    onBackendSyncChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     onLogout: () -> Unit,
-    onNavigateToAdvanced: () -> Unit
+    onNavigateToAdvanced: () -> Unit,
+    onNavigateToContacts: () -> Unit = {},
+    onNavigateToHistory: () -> Unit = {}
 ) {
+    val themeColor = sentinelGreen
+    val bgColor = MaterialTheme.colorScheme.background
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf(userName) }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("MISSION PROFILE", fontWeight = FontWeight.Black, fontSize = 18.sp, color = sentinelGreen) },
+            text = {
+                Column {
+                    Text("REGISTRY ID: ${userPhone}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Sentinel Alias") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = sentinelGreen)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        UserSession.updateName(context, editedName)
+                        showInfoDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = sentinelGreen)
+                ) {
+                    Text("UPDATE REGISTRY")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("ABORT", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
+        containerColor = bgColor
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Profile Section
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            // Professional Cinematic Header (Kept Green as per user request)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+                    .clip(RoundedCornerShape(bottomStart = 60.dp, bottomEnd = 60.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(sentinelGreen, sentinelGreen.copy(0.6f))
+                        )
+                    )
             ) {
-                Row(modifier = Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(64.dp).background(AccentBlue.copy(0.1f), CircleShape).border(1.dp, AccentBlue, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(userName.take(1).uppercase(), color = AccentBlueLight, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                // Subtle Tactical HUD Overlay
+                TacticalGrid(gridColor = Color.White.copy(alpha = 0.08f))
+
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.padding(top = 48.dp, start = 16.dp).background(Color.White.copy(0.15f), CircleShape)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Spacer(modifier = Modifier.height(40.dp))
+                    
+                    // Premium Glowing Avatar Container
+                    Box(contentAlignment = Alignment.Center) {
+                        // Outer Halo Glow
+                        Surface(
+                            modifier = Modifier.size(150.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onSurface.copy(0.05f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(0.1f))
+                        ) {}
+                        
+                        // Inner Glowing Ring
+                        Surface(
+                            modifier = Modifier.size(135.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onSurface.copy(0.1f),
+                            border = androidx.compose.foundation.BorderStroke(2.dp, sentinelGreen.copy(0.4f))
+                        ) {}
+
+                        // Profile Icon Surface
+                        Surface(
+                            modifier = Modifier.size(120.dp),
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.onSurface.copy(0.05f)),
+                            shadowElevation = 10.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Person, 
+                                    contentDescription = null, 
+                                    tint = sentinelBlue.copy(0.9f), 
+                                    modifier = Modifier.size(70.dp)
+                                )
+                                
+                                // Integrated HUD Status Dot (Bottom-Right)
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .align(Alignment.BottomEnd)
+                                        .padding(4.dp)
+                                        .background(MaterialTheme.colorScheme.surface, CircleShape)
+                                        .padding(2.dp)
+                                        .background(sentinelGreen, CircleShape)
+                                        .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(0.2f), CircleShape)
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(userName, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(userPhone, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
-                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // User Identity Section
+                    Text(
+                        editedName.uppercase(Locale.ROOT), 
+                        color = MaterialTheme.colorScheme.onSurface, 
+                        fontSize = 24.sp, 
+                        fontWeight = FontWeight.Black, 
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        userPhone, 
+                        color = MaterialTheme.colorScheme.onSurface.copy(0.6f), 
+                        fontSize = 14.sp, 
+                        fontWeight = FontWeight.Medium, 
+                        letterSpacing = 1.sp
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("PREFERENCES", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp, modifier = Modifier.padding(start = 8.dp))
-            Spacer(modifier = Modifier.height(8.dp))
+            // Categories
+            Column(modifier = Modifier.padding(24.dp)) {
+                
+                Text("ACCOUNT", color = themeColor, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Spacer(modifier = Modifier.height(16.dp))
 
-            SettingsItem(Icons.Default.Notifications, "Emergency Alerts", "Toggle SOS sound and vibration")
-            SettingsItem(Icons.Default.CloudSync, "Backend Sync", "Automatic incident reporting")
-            SettingsItem(Icons.Default.PrivacyTip, "Data Privacy", "Manage location sharing logs")
+                ProfileCard {
+                    ProfileItem(
+                        icon = Icons.Default.ManageAccounts, 
+                        title = "Personal Information",
+                        onClick = { showInfoDialog = true }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outline.copy(0.05f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 24.dp))
+                    ProfileItem(
+                        icon = Icons.Default.Shield, 
+                        title = "Emergency SOS Guardian", 
+                        onClick = onNavigateToContacts
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("DEVELOPER TOOLS", color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp, modifier = Modifier.padding(start = 8.dp))
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            AdvancedCard("🛠️ Advanced Control Center", "Diagnostics and engineering tools", onNavigateToAdvanced)
+                ProfileCard {
+                    ProfileItem(
+                        icon = Icons.Default.HistoryEdu, 
+                        title = "Mission History", 
+                        onClick = onNavigateToHistory
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(40.dp))
-
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(0.05f)),
-                shape = RoundedCornerShape(100.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, AlertRedBright.copy(0.3f))
-            ) {
-                Icon(Icons.Default.Logout, contentDescription = null, tint = AlertRedBright)
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("LOGOUT ACCOUNT", color = AlertRedBright, fontWeight = FontWeight.Black)
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .border(1.dp, sentinelRed.copy(0.3f), RoundedCornerShape(24.dp)),
+                    colors = ButtonDefaults.buttonColors(containerColor = sentinelRed.copy(0.05f)),
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Icon(Icons.Default.Logout, contentDescription = null, tint = sentinelRed, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("TERMINATE SESSION", color = sentinelRed, fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 1.sp)
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                TextButton(onClick = onNavigateToAdvanced, modifier = Modifier.fillMaxWidth()) {
+                    Text("ADVANCED MISSION TOOLS", color = themeColor.copy(0.7f), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                }
+                Spacer(modifier = Modifier.height(60.dp))
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("DualShield AI v1.2.0 • Sentinel Edition", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
     }
 }
 
 @Composable
-fun SettingsItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, desc: String) {
+fun ProfileCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(0.05f))
+    ) {
+        Column { content() }
+    }
+}
+
+@Composable
+fun ProfileIconBox(icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Surface(
+        modifier = Modifier.size(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = sentinelBlue.copy(0.1f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, sentinelBlue.copy(0.2f))
+    ) {
+        Icon(icon, contentDescription = null, tint = sentinelBlue, modifier = Modifier.padding(10.dp))
+    }
+}
+
+@Composable
+fun ProfileItem(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String = "", onClick: () -> Unit = {}) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = AccentBlueLight, modifier = Modifier.size(20.dp))
-        }
+        ProfileIconBox(icon)
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(desc, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onBackground)
+            if (subtitle.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
         }
-        Switch(checked = true, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedTrackColor = AccentBlue))
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f))
     }
 }
