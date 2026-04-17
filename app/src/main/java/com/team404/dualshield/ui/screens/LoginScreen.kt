@@ -204,24 +204,30 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                     initialEmergencyName = regEmergencyName.trim(),
                                     initialEmergencyPhone = regEmergencyPhone.trim()
                                 )
-                                
-                                // Sync logic
-                                try {
-                                    api.syncUserData(com.team404.dualshield.api.SyncRequest(
-                                        phone = regPhone.trim(),
-                                        name = regName.trim(),
-                                        contacts = UserSession.getContactsList(context)
-                                    ))
-                                } catch (e: Exception) {
-                                    android.util.Log.e("AuthSync", "Sync failed: ${e.message}")
-                                }
-                                
                                 onLoginSuccess()
                             } else {
-                                errorMessage = "Registry Error: Server returned ${resp.code()}. Please try again."
+                                // Fallback to Standalone Mode if server returns error
+                                UserSession.save(
+                                    context = context,
+                                    userId = "LOCAL_${regPhone.trim()}",
+                                    name = regName.trim(),
+                                    phone = regPhone.trim(),
+                                    initialEmergencyName = regEmergencyName.trim(),
+                                    initialEmergencyPhone = regEmergencyPhone.trim()
+                                )
+                                onLoginSuccess()
                             }
                         } catch (e: Exception) {
-                            errorMessage = "Connectivity Fault: Unable to reach protection servers."
+                            // Fallback to Standalone Mode if connectivity fails
+                            UserSession.save(
+                                context = context,
+                                userId = "LOCAL_${regPhone.trim()}",
+                                name = regName.trim(),
+                                phone = regPhone.trim(),
+                                initialEmergencyName = regEmergencyName.trim(),
+                                initialEmergencyPhone = regEmergencyPhone.trim()
+                            )
+                            onLoginSuccess()
                         } finally {
                             isLoading = false
                         }

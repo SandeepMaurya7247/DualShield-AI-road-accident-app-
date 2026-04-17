@@ -257,11 +257,24 @@ fun HistoryScreen(onBack: () -> Unit) {
         isLoading = true
         scope.launch {
             try {
-                // Fetch incidents by phone number for easy retrieval
-                val resp = api.getIncidents(phone = if (userPhone.isNotBlank()) userPhone else null)
-                incidents = resp.body() ?: emptyList()
+                // 1. Fetch Local Incidents (Phone Storage)
+                val localItems = com.team404.dualshield.api.UserSession.getLocalIncidents(context)
+                
+                // 2. Fetch Cloud Incidents (Atlas)
+                val cloudResp = try {
+                    api.getIncidents(phone = if (userPhone.isNotBlank()) userPhone else null)
+                } catch (e: Exception) { null }
+                
+                val cloudItems = cloudResp?.body() ?: emptyList()
+
+                // 3. Merge & Deduplicate by Timestamp
+                val merged = (localItems + cloudItems)
+                    .distinctBy { it.timestamp }
+                    .sortedByDescending { it.timestamp }
+                
+                incidents = merged
             } catch (e: Exception) { 
-                android.util.Log.e("HistoryScreen", "Fetch failed: ${e.message}")
+                android.util.Log.e("HistoryScreen", "Merge failed: ${e.message}")
             }
             finally { isLoading = false }
         }

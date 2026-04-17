@@ -17,6 +17,7 @@ object UserSession {
     private const val KEY_EMERGENCY_ALERTS = "emergency_alerts"
     private const val KEY_BACKEND_SYNC = "backend_sync"
     private const val KEY_DATA_PRIVACY = "data_privacy"
+    private const val KEY_INCIDENTS = "local_incidents_json"
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
@@ -121,4 +122,23 @@ object UserSession {
 
     fun isDataPrivacyEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_DATA_PRIVACY, true)
     fun setDataPrivacy(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_DATA_PRIVACY, enabled).apply()
+
+    // --- Local Incident History ---
+    fun saveIncidentLocal(context: Context, item: IncidentItem) {
+        val current = getLocalIncidents(context).toMutableList()
+        current.add(0, item) // Add to top
+        val limited = current.take(50) // Keep last 50 only
+        val json = com.google.gson.Gson().toJson(limited)
+        prefs(context).edit().putString(KEY_INCIDENTS, json).apply()
+    }
+
+    fun getLocalIncidents(context: Context): List<IncidentItem> {
+        val json = prefs(context).getString(KEY_INCIDENTS, "[]") ?: "[]"
+        return try {
+            val listType = object : com.google.gson.reflect.TypeToken<List<IncidentItem>>() {}.type
+            com.google.gson.Gson().fromJson(json, listType) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 }

@@ -62,51 +62,56 @@ class EmergencyManager(private val context: Context) {
             val location = getLastKnownLocation()
             val (lat, lng) = if (location != null) Pair(location.latitude, location.longitude) else Pair(28.6139, 77.2090)
             
-            // ── GLOBAL INCIDENT REPORTING ──────────────────────────────
-            // We only report AUTOMATIC AI detections to the database
-            // as per user request (Manual SOS is excluded).
+            // 2. Local Backup (Persistent even if offline)
+            val userPhone = com.team404.dualshield.api.UserSession.getPhone(context)
+            val reportId = if (userId.isNullOrBlank() || userId == "unknown") userPhone else userId
+            
             if (isAutomatic) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val userPhone = com.team404.dualshield.api.UserSession.getPhone(context)
-                        // Use Phone as primary identifier for new users / reliable indexing
-                        val reportId = if (userId.isNullOrBlank() || userId == "unknown") userPhone else userId
-                        
-                        Log.d("EmergencyManager", "Reporting automatic incident for phone: $userPhone (ID: $reportId)")
-                        val response = api.reportIncident(
-                            IncidentReport(
-                                userId = reportId,
-                                phone = userPhone,
-                                latitude = lat,
-                                longitude = lng,
-                                severityLevel = 3, // High severity for AI detection
-                                accelX = ax,
-                                accelY = ay,
-                                accelZ = az,
-                                gyroX = gx,
-                                gyroY = gy,
-                                gyroZ = gz,
-                                timestamp = System.currentTimeMillis()
-                            )
-                        )
-                        if (response.isSuccessful) {
-                            Log.d("EmergencyManager", "✅ BACKEND REPORT SUCCESS: ${response.body()?.incident_id}")
-                        } else {
-                            val errorStr = response.errorBody()?.string() ?: "Unknown error"
-                            Log.e("EmergencyManager", "❌ BACKEND REPORT FAILED: Status ${response.code()} - $errorStr")
-                        }
-                    } catch (e: Exception) {
-                        Log.e("EmergencyManager", "❌ BACKEND REPORT EXCEPTION: ${e.message}")
-                    }
-                }
-            } else {
-                Log.d("EmergencyManager", "ℹ️ Manual SOS: Skipping backend report as per configuration.")
+                com.team404.dualshield.api.UserSession.saveIncidentLocal(
+                    context,
+                    com.team404.dualshield.api.IncidentItem(
+                        userId = reportId,
+                        phone = userPhone,
+                        latitude = lat,
+                        longitude = lng,
+                        severityLevel = 3,
+                        accelX = ax, accelY = ay, accelZ = az,
+                        gyroX = gx, gyroY = gy, gyroZ = gz,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
             }
 
-            // 2. Send SMS
+            // 3. Send SMS (Crucial - must happen fast)
             val message = "🚨 EMERGENCY! DualShield AI detected a crash. Location: https://www.google.com/maps?q=$lat,$lng"
             uniquePhones.forEach { phone ->
                 sendSms(phone, message)
+            }
+
+            // 4. Global Incident Reporting (Cloud Sync)
+            if (isAutomatic && com.team404.dualshield.api.UserSession.isBackendSyncEnabled(context)) {
+                try {
+                    Log.d("EmergencyManager", "Syncing automatic incident to Atlas for ID: $reportId")
+                    val response = api.reportIncident(
+                        IncidentReport(
+                            userId = reportId,
+                            phone = userPhone,
+                            latitude = lat,
+                            longitude = lng,
+                            severityLevel = 3,
+                            accelX = ax, accelY = ay, accelZ = az,
+                            gyroX = gx, gyroY = gy, gyroZ = gz,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    if (response.isSuccessful) {
+                        Log.d("EmergencyManager", "✅ BACKEND REPORT SUCCESS: ${response.body()?.incident_id}")
+                    } else {
+                        Log.e("EmergencyManager", "❌ BACKEND REPORT FAILED: ${response.code()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("EmergencyManager", "❌ BACKEND REPORT EXCEPTION: ${e.message}")
+                }
             }
             
             // 3. Initiate Call to PRIMARY contact only (no police fallback)
