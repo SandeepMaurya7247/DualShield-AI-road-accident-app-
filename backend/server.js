@@ -94,6 +94,7 @@ app.get('/', (req, res) => {
 
 // ── Health Check ──
 app.get('/health', (req, res) => {
+    console.log(`[HEALTH] Heartbeat received at: ${new Date().toISOString()} - Keeping system active`);
     const mode = isDbConnected ? "Persistent (MongoDB)" : "Fast-Demo (In-Memory Fallback)";
     res.status(200).json({
         status: 'online',
