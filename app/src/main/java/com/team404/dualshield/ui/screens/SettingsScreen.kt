@@ -92,6 +92,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
             // Professional Cinematic Header (Kept Green as per user request)

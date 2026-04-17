@@ -62,24 +62,24 @@ class EmergencyManager(private val context: Context) {
             val location = getLastKnownLocation()
             val (lat, lng) = if (location != null) Pair(location.latitude, location.longitude) else Pair(28.6139, 77.2090)
             
-            // 1. Report to Backend (Only for automatic AI detections)
+            // ── GLOBAL INCIDENT REPORTING ──────────────────────────────
+            // We only report AUTOMATIC AI detections to the database
+            // as per user request (Manual SOS is excluded).
             if (isAutomatic) {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
-                        val reportUserId = if (userId.isNullOrBlank() || userId == "unknown") {
-                            com.team404.dualshield.api.UserSession.getPhone(context)
-                        } else {
-                            userId
-                        }
+                        val userPhone = com.team404.dualshield.api.UserSession.getPhone(context)
+                        // Use Phone as primary identifier for new users / reliable indexing
+                        val reportId = if (userId.isNullOrBlank() || userId == "unknown") userPhone else userId
                         
-                        Log.d("EmergencyManager", "Reporting incident for user: $reportUserId")
+                        Log.d("EmergencyManager", "Reporting automatic incident for phone: $userPhone (ID: $reportId)")
                         val response = api.reportIncident(
                             IncidentReport(
-                                userId = reportUserId,
-                                phone = com.team404.dualshield.api.UserSession.getPhone(context),
+                                userId = reportId,
+                                phone = userPhone,
                                 latitude = lat,
                                 longitude = lng,
-                                severityLevel = 3,
+                                severityLevel = 3, // High severity for AI detection
                                 accelX = ax,
                                 accelY = ay,
                                 accelZ = az,
@@ -94,14 +94,13 @@ class EmergencyManager(private val context: Context) {
                         } else {
                             val errorStr = response.errorBody()?.string() ?: "Unknown error"
                             Log.e("EmergencyManager", "❌ BACKEND REPORT FAILED: Status ${response.code()} - $errorStr")
-                            Log.e("EmergencyManager", "💡 Check if your LocalTunnel is still active or if Atlas Whitelist is blocking the server.")
                         }
                     } catch (e: Exception) {
                         Log.e("EmergencyManager", "❌ BACKEND REPORT EXCEPTION: ${e.message}")
                     }
                 }
             } else {
-                Log.d("EmergencyManager", "ℹ️ Manual SOS triggered: Skipping backend report.")
+                Log.d("EmergencyManager", "ℹ️ Manual SOS: Skipping backend report as per configuration.")
             }
 
             // 2. Send SMS

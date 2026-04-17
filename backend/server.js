@@ -223,8 +223,12 @@ app.post('/api/incidents', async (req, res) => {
         data.received_at = new Date().toISOString();
         
         const reportUser = data.phone || data.userId || 'unknown';
+        // Ensure userId is mapped to phone if generic
+        if (data.userId === 'unknown' || !data.userId) {
+            data.userId = data.phone || 'unknown';
+        }
+        
         console.log(`🚨 CRASH REPORT: User ${reportUser} at (${data.latitude}, ${data.longitude})`);
-        console.log(`📊 TELEMETRY: Accel(${data.accelX}, ${data.accelY}, ${data.accelZ}) Gyro(${data.gyroX}, ${data.gyroY}, ${data.gyroZ})`);
         
         let iid = Date.now().toString();
         if (isDbConnected) {
@@ -270,9 +274,8 @@ app.get('/api/incidents', async (req, res) => {
             } else if (userId) {
                 list = list.filter(inc => inc.userId === userId);
             }
-            list.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-            result = list.slice(0, 20).map(doc => ({
-                id: doc._id,
+            result = list.reverse().slice(0, 20).map(doc => ({
+                id: doc._id || doc.id, // Handle both MongoDB _id and fallback id
                 userId: doc.userId || 'unknown',
                 phone: doc.phone || '',
                 latitude: doc.latitude || 0,

@@ -18,6 +18,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -56,6 +57,7 @@ class EmergencyActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         // ALARM-STYLE LOCK SCREEN BYPASS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

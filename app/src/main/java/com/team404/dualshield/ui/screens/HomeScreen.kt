@@ -198,7 +198,10 @@ fun HomeScreen(
     )
 
     Box(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .safeDrawingPadding()
     ) {
         // Tactical Background Layer
         TacticalGrid()

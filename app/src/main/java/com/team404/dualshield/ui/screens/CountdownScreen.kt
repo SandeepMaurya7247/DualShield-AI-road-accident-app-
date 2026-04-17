@@ -184,7 +184,10 @@ fun CountdownScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .safeDrawingPadding()
     ) {
         TacticalGrid(gridColor = sentinelRed.copy(alpha = 0.05f))
 
