@@ -134,7 +134,7 @@ interface BackendApi {
     suspend fun syncUserData(@Body request: SyncRequest): Response<AuthResponse>
 
     companion object {
-        private const val BASE_URL = "https://dual-shield-safe.loca.lt/"
+        private const val BASE_URL = "https://dualshield-ai-road-accident-app.onrender.com/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()
