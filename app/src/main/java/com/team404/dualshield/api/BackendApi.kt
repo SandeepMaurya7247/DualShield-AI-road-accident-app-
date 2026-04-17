@@ -30,6 +30,7 @@ data class SyncRequest(
 
 data class IncidentReport(
     val userId: String,
+    val phone: String = "",
     val latitude: Double,
     val longitude: Double,
     val severityLevel: Int,
@@ -61,6 +62,7 @@ data class IncidentResponse(
 data class IncidentItem(
     val id: String = "",
     val userId: String = "",
+    val phone: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val severityLevel: Int = 1,
@@ -110,7 +112,10 @@ interface BackendApi {
     suspend fun reportIncident(@Body report: IncidentReport): Response<IncidentResponse>
 
     @GET("api/incidents")
-    suspend fun getIncidents(@Query("userId") userId: String? = null): Response<List<IncidentItem>>
+    suspend fun getIncidents(
+        @Query("userId") userId: String? = null,
+        @Query("phone") phone: String? = null
+    ): Response<List<IncidentItem>>
 
     // Geofences
     @GET("api/geofences/accident-zones")
@@ -134,7 +139,7 @@ interface BackendApi {
     suspend fun syncUserData(@Body request: SyncRequest): Response<AuthResponse>
 
     companion object {
-        private const val BASE_URL = "https://dualshield-ai-road-accident-app.onrender.com/"
+        private const val BASE_URL = "https://dualshield-live-v3.loca.lt/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()

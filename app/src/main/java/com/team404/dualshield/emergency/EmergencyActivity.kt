@@ -74,22 +74,7 @@ class EmergencyActivity : ComponentActivity() {
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // START LOUD ALARM SOUND (Disabled by User Request)
-        /*
-        try {
-            val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) 
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(applicationContext, alarmUri)
-                setAudioStreamType(android.media.AudioManager.STREAM_ALARM)
-                isLooping = true
-                prepare()
-                start()
-            }
-        } catch (e: Exception) {
-            Log.e("EmergencyActivity", "Failed to play alarm: ${e.message}")
-        }
-        */
+
 
         // START VIBRATION
         try {
@@ -110,6 +95,7 @@ class EmergencyActivity : ComponentActivity() {
                 tts?.setLanguage(Locale.US)
             }
         }
+
 
         // INITIALIZE SPEECH RECOGNIZER
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
@@ -297,7 +283,13 @@ fun EmergencyCountdownScreen(
             statusText = "Sending SOS..."
             val phones = contacts.map { it.contact_phone.trim() }.filter { it.isNotBlank() }.distinct()
             val em = com.team404.dualshield.emergency.EmergencyManager(context)
-            em.dispatchSOS(phones, userId, ax, ay, az, gx, gy, gz)
+            em.dispatchSOS(
+                contactPhones = phones,
+                userId = userId,
+                isAutomatic = true,
+                ax = ax, ay = ay, az = az,
+                gx = gx, gy = gy, gz = gz
+            )
             delay(3000L)
             onFinish()
         }

@@ -35,18 +35,24 @@ function saveFallbackStore() {
 }
 
 // Connect to MongoDB
-mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
+mongoose.connect(mongoUri, { 
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000 
+})
     .then(() => {
         isDbConnected = true;
-        const dbName = mongoose.connection.name;
-        console.log(`[DATABASE] Success! Connected to MongoDB: "${dbName}"`);
+        const host = mongoose.connection.host;
+        console.log(`[DATABASE] Success! Connected to MongoDB Hosted at: ${host}`);
+        console.log(`[DATABASE] Active Database: "${mongoose.connection.name}"`);
     })
     .catch((err) => {
         isDbConnected = false;
         loadFallbackStore();
-        console.log(`[DATABASE] WARNING: Connection to ${mongoUri} failed.`);
-        console.log(`[DATABASE] Using local file fallback: ${FALLBACK_FILE}`);
-        console.log(`[DATABASE] Error Reason: ${err.message}`);
+        console.log(`\n[DATABASE] ❌ WARNING: CONNECTION TO ATLAS FAILED!`);
+        console.log(`[DATABASE] URI: ${mongoUri.split('@')[1] ? '***@' + mongoUri.split('@')[1] : mongoUri}`);
+        console.log(`[DATABASE] ERROR: ${err.message}`);
+        console.log(`[DATABASE] ACTION: Ensure your current IP is whitelisted in Atlas -> Network Access.`);
+        console.log(`[DATABASE] FALLBACK: Using local file [${FALLBACK_FILE}]\n`);
     });
 
 // Mongoose Models
@@ -61,6 +67,7 @@ const User = mongoose.model('User', userSchema);
 
 const incidentSchema = new mongoose.Schema({
     userId: String,
+    phone: String,
     latitude: Number,
     longitude: Number,
     severityLevel: Number,
@@ -85,14 +92,19 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'templates', 'index.html'));
 });
 
-// ── Health ──
+// ── Health Check ──
 app.get('/health', (req, res) => {
     const mode = isDbConnected ? "Persistent (MongoDB)" : "Fast-Demo (In-Memory Fallback)";
     res.status(200).json({
         status: 'online',
         mode: mode,
         database: isDbConnected ? 'connected' : 'disconnected',
-        version: '2.1.0'
+        db_details: isDbConnected ? {
+            name: mongoose.connection.name,
+            host: mongoose.connection.host
+        } : null,
+        ip_whitelist_hint: "Check Atlas Network Access if database is disconnected",
+        version: '2.2.0'
     });
 });
 
@@ -209,7 +221,8 @@ app.post('/api/incidents', async (req, res) => {
         if (!data) return res.status(400).json({ error: 'No data provided' });
         data.received_at = new Date().toISOString();
         
-        console.log(`🚨 CRASH REPORT: User ${data.userId} at (${data.latitude}, ${data.longitude})`);
+        const reportUser = data.phone || data.userId || 'unknown';
+        console.log(`🚨 CRASH REPORT: User ${reportUser} at (${data.latitude}, ${data.longitude})`);
         console.log(`📊 TELEMETRY: Accel(${data.accelX}, ${data.accelY}, ${data.accelZ}) Gyro(${data.gyroX}, ${data.gyroY}, ${data.gyroZ})`);
         
         let iid = Date.now().toString();
@@ -232,14 +245,17 @@ app.post('/api/incidents', async (req, res) => {
 app.get('/api/incidents', async (req, res) => {
     try {
         let result = [];
-        const { userId } = req.query;
-        const filter = userId ? { userId } : {};
+        const { userId, phone } = req.query;
+        let filter = {};
+        if (phone) filter.phone = phone;
+        else if (userId) filter.userId = userId;
 
         if (isDbConnected) {
             const docs = await Incident.find(filter).sort({ timestamp: -1 }).limit(20);
             result = docs.map(doc => ({
                 id: doc._id,
                 userId: doc.userId || 'unknown',
+                phone: doc.phone || '',
                 latitude: doc.latitude || 0,
                 longitude: doc.longitude || 0,
                 severityLevel: doc.severityLevel || 1,
@@ -248,13 +264,16 @@ app.get('/api/incidents', async (req, res) => {
             }));
         } else {
             let list = [...fallbackStore.incidents];
-            if (userId) {
+            if (phone) {
+                list = list.filter(inc => inc.phone === phone);
+            } else if (userId) {
                 list = list.filter(inc => inc.userId === userId);
             }
             list.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
             result = list.slice(0, 20).map(doc => ({
                 id: doc._id,
                 userId: doc.userId || 'unknown',
+                phone: doc.phone || '',
                 latitude: doc.latitude || 0,
                 longitude: doc.longitude || 0,
                 severityLevel: doc.severityLevel || 1,
@@ -408,12 +427,21 @@ app.delete('/api/users/:phone/contacts/:contactPhone', async (req, res) => {
 app.listen(PORT, '0.0.0.0', async () => {
     console.log(`🚀 Sentinel Backend active on http://0.0.0.0:${PORT}`);
     
+    // Log Public IP for Whitelisting
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        console.log(`🌍 Server Public IP (for Atlas Whitelist): ${data.ip}`);
+    } catch (e) {
+        console.log('🌍 Could not fetch Public IP (check internet connection)');
+    }
+    
     // ── AUTOMATED TUNNEL INITIALIZATION (Development Only) ──
     if (process.env.NODE_ENV !== 'production') {
         try {
             const tunnel = await localtunnel({ 
                 port: PORT, 
-                subdomain: 'dual-shield-safe' 
+                subdomain: 'dualshield-live-v3' 
             });
             
             console.log(`📡 Sentinel Tunnel Active: ${tunnel.url}`);

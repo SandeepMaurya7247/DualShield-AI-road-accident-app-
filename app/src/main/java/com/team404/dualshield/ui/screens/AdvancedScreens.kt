@@ -257,8 +257,8 @@ fun HistoryScreen(onBack: () -> Unit) {
         isLoading = true
         scope.launch {
             try {
-                // Fetch incidents only for this user
-                val resp = api.getIncidents(userId = if (userPhone.isNotBlank()) userPhone else null)
+                // Fetch incidents by phone number for easy retrieval
+                val resp = api.getIncidents(phone = if (userPhone.isNotBlank()) userPhone else null)
                 incidents = resp.body() ?: emptyList()
             } catch (e: Exception) { 
                 android.util.Log.e("HistoryScreen", "Fetch failed: ${e.message}")

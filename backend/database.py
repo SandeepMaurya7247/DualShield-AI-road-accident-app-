@@ -84,11 +84,15 @@ def insert_incident(db, data):
         _save_store(MOCK_STORE)
         return incident['_id']
 
-def get_recent_incidents(db, limit=20):
+def get_recent_incidents(db, limit=20, user_id=None):
+    query = {"userId": user_id} if user_id else {}
     if db is not None:
-        return list(db['incidents'].find().sort("timestamp", -1).limit(limit))
+        return list(db['incidents'].find(query).sort("timestamp", -1).limit(limit))
     else:
-        return sorted(MOCK_STORE['incidents'], key=lambda x: x.get('timestamp', 0), reverse=True)[:limit]
+        incidents = MOCK_STORE['incidents']
+        if user_id:
+            incidents = [i for i in incidents if i.get('userId') == user_id]
+        return sorted(incidents, key=lambda x: x.get('timestamp', 0), reverse=True)[:limit]
 
 # ── Geofences ─────────────────────────────────────────────────────────────────
 def get_geofences(db):

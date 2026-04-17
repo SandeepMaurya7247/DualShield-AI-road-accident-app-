@@ -73,8 +73,8 @@ def report_incident():
 @app.route('/api/incidents', methods=['GET'])
 def fetch_incidents():
     try:
-        raw = get_recent_incidents(db)
-        result = []
+        user_id = request.args.get('userId')
+        raw = get_recent_incidents(db, user_id=user_id)
         for doc in raw:
             result.append({
                 'id': str(doc.get('_id', '')),

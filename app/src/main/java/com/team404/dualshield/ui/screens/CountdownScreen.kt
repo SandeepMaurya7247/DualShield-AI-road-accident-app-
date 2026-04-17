@@ -154,7 +154,11 @@ fun CountdownScreen(
             }
 
             val emergencyManager = com.team404.dualshield.emergency.EmergencyManager(context)
-            emergencyManager.dispatchSOS(contactPhones, userId, 0f, 0f, 0f, 0f, 0f, 0f)
+            emergencyManager.dispatchSOS(
+                contactPhones = contactPhones,
+                userId = userId,
+                isAutomatic = false
+            )
 
             assistantManager.stop()
             onTimeUp()

@@ -47,20 +47,11 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
     val api = remember { BackendApi.create() }
 
-    var selectedTab by remember { mutableStateOf(0) } // 0=Login, 1=Register
-
-    // Login fields
-    var loginPhone by remember { mutableStateOf("") }
-    var loginPassword by remember { mutableStateOf("") }
-    var loginPasswordVisible by remember { mutableStateOf(false) }
-
-    // Register fields
+    // Form fields
     var regName by remember { mutableStateOf("") }
     var regPhone by remember { mutableStateOf("") }
     var regEmergencyName by remember { mutableStateOf("") }
     var regEmergencyPhone by remember { mutableStateOf("") }
-    var regPassword by remember { mutableStateOf("") }
-    var regPasswordVisible by remember { mutableStateOf(false) }
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
@@ -124,7 +115,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 letterSpacing = 1.sp
             )
             Text(
-                "Intelligent Accident Protection",
+                "Your Guardian on the Road",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
@@ -132,249 +123,117 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // ── Tab Switcher ──────────────────────────────────────────────
+            // ── Unified Registration Form ────────────────────────────────
+            Text("Protective Profile", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+            Text("Enter details to enable automatic crash detection", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
+            
+            Spacer(modifier = Modifier.height(32.dp))
+
+            DsTextField(
+                value = regName,
+                onValueChange = { regName = it },
+                label = "Full Name",
+                icon = Icons.Default.Person
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            DsTextField(
+                value = regPhone,
+                onValueChange = { regPhone = it },
+                label = "10-digit Mobile Number",
+                icon = Icons.Default.Phone,
+                keyboardType = KeyboardType.Phone
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Emergency Contact Section
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("LOGIN", "REGISTER").forEachIndexed { index, label ->
-                    val isSelected = selectedTab == index
-                    val bgColor by animateColorAsState(
-                        targetValue = if (isSelected) AccentBlue else Color.Transparent,
-                        animationSpec = tween(300),
-                        label = "tabBg"
-                    )
-                    val textColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = tween(300),
-                        label = "tabText"
-                    )
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(bgColor)
-                            .clickable { selectedTab = index; errorMessage = "" }
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(label, color = textColor, fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 1.sp)
-                    }
-                }
+                Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
+                Text("EMERGENCY GUARDIAN", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
             }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            DsTextField(
+                value = regEmergencyName,
+                onValueChange = { regEmergencyName = it },
+                label = "Emergency Contact Name",
+                icon = Icons.Default.FavoriteBorder
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            DsTextField(
+                value = regEmergencyPhone,
+                onValueChange = { regEmergencyPhone = it },
+                label = "Emergency Contact Number",
+                icon = Icons.Default.ContactPhone,
+                keyboardType = KeyboardType.Phone
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // ── Form Fields ───────────────────────────────────────────────
-            if (selectedTab == 0) {
-                // LOGIN FORM
-                Text("Welcome back", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-                Text("Sign in to continue protection", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(24.dp))
-
-                DsTextField(
-                    value = loginPhone,
-                    onValueChange = { loginPhone = it },
-                    label = "Phone Number",
-                    icon = Icons.Default.Phone,
-                    keyboardType = KeyboardType.Phone
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                DsTextField(
-                    value = loginPassword,
-                    onValueChange = { loginPassword = it },
-                    label = "Password",
-                    icon = Icons.Default.Lock,
-                    isPassword = true,
-                    passwordVisible = loginPasswordVisible,
-                    onPasswordToggle = { loginPasswordVisible = !loginPasswordVisible }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Forgot password?",
-                    color = AccentBlueLight,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.align(Alignment.End)
-                )
-                Spacer(modifier = Modifier.height(28.dp))
-
-                DsButton(
-                    text = "LOGIN",
-                    isLoading = isLoading,
-                    onClick = {
-                        if (loginPhone.isBlank()) {
-                            errorMessage = "Please enter your phone number."
-                            return@DsButton
-                        }
-                        isLoading = true
-                        errorMessage = ""
-                        coroutineScope.launch {
-                            try {
-                                val resp = api.loginUser(LoginRequest(loginPhone.trim()))
-                                if (resp.isSuccessful) {
-                                    val body = resp.body()
-                                    if (body != null && body.status == "success") {
-                                        val finalName = body.name ?: "User"
-                                        UserSession.save(context, body.user_id ?: "uid", finalName, loginPhone.trim())
-                                        
-                                        // ── Sync All Data to Server ──
-                                        try {
-                                            api.syncUserData(com.team404.dualshield.api.SyncRequest(
-                                                phone = loginPhone.trim(),
-                                                name = finalName,
-                                                contacts = UserSession.getContactsList(context)
-                                            ))
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("LoginSync", "Sync failed: ${e.message}")
-                                        }
-                                        
-                                        onLoginSuccess()
-                                    } else {
-                                        errorMessage = "Phone not registered. Please register first."
-                                    }
-                                } else if (resp.code() == 404) {
-                                    errorMessage = "Phone not registered. Please register first."
-                                } else {
-                                    errorMessage = "Mission Control is unreachable (Error Code: ${resp.code()}). Please check your connection."
-                                }
-                            } catch (e: Exception) {
-                                errorMessage = "Network Fault: Unable to reach the Registry. Ensure your server is active."
-                            } finally {
-                                isLoading = false
-                            }
-                        }
+            DsButton(
+                text = "GET STARTED",
+                isLoading = isLoading,
+                onClick = {
+                    if (regName.isBlank() || regPhone.isBlank() || regEmergencyPhone.isBlank()) {
+                        errorMessage = "All fields are required for maximum safety."
+                        return@DsButton
                     }
-                )
-
-            } else {
-                // REGISTER FORM
-                Text("Create Account", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
-                Text("Join the Sentinel Network", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
-                Spacer(modifier = Modifier.height(24.dp))
-
-                DsTextField(
-                    value = regName,
-                    onValueChange = { regName = it },
-                    label = "Full Name",
-                    icon = Icons.Default.Person
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                DsTextField(
-                    value = regPhone,
-                    onValueChange = { regPhone = it },
-                    label = "Phone Number",
-                    icon = Icons.Default.Phone,
-                    keyboardType = KeyboardType.Phone
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                DsTextField(
-                    value = regPassword,
-                    onValueChange = { regPassword = it },
-                    label = "Password",
-                    icon = Icons.Default.Lock,
-                    isPassword = true,
-                    passwordVisible = regPasswordVisible,
-                    onPasswordToggle = { regPasswordVisible = !regPasswordVisible }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Emergency Contact Section
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
-                    Text("EMERGENCY CONTACT", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                DsTextField(
-                    value = regEmergencyName,
-                    onValueChange = { regEmergencyName = it },
-                    label = "Emergency Contact Name",
-                    icon = Icons.Default.FavoriteBorder
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                DsTextField(
-                    value = regEmergencyPhone,
-                    onValueChange = { regEmergencyPhone = it },
-                    label = "Emergency Contact Number",
-                    icon = Icons.Default.ContactPhone,
-                    keyboardType = KeyboardType.Phone
-                )
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                DsButton(
-                    text = "CREATE ACCOUNT",
-                    isLoading = isLoading,
-                    onClick = {
-                        if (regName.isEmpty() || regPhone.isEmpty()) {
-                            errorMessage = "Name and Phone are required."
-                            return@DsButton
-                        }
-                        isLoading = true
-                        errorMessage = ""
-                        coroutineScope.launch {
-                            try {
-                                val resp = api.registerUser(
-                                    RegisterRequest(
-                                        name = regName.trim(),
-                                        phone = regPhone.trim(),
-                                        emergency_name = regEmergencyName.trim(),
-                                        emergency_phone = regEmergencyPhone.trim()
-                                    )
+                    if (regPhone.length < 10) {
+                        errorMessage = "Please enter a valid 10-digit mobile number."
+                        return@DsButton
+                    }
+                    
+                    isLoading = true
+                    errorMessage = ""
+                    coroutineScope.launch {
+                        try {
+                            val resp = api.registerUser(
+                                RegisterRequest(
+                                    name = regName.trim(),
+                                    phone = regPhone.trim(),
+                                    emergency_name = regEmergencyName.trim(),
+                                    emergency_phone = regEmergencyPhone.trim()
                                 )
-                                if (resp.isSuccessful || resp.code() == 202) {
-                                    val body = resp.body()
-                                    val finalName = regName.trim()
-                                    val finalPhone = regPhone.trim()
-                                    val eName = regEmergencyName.trim()
-                                    val ePhone = regEmergencyPhone.trim()
-
-                                    UserSession.save(
-                                        context = context,
-                                        userId = body?.user_id ?: "uid",
-                                        name = finalName,
-                                        phone = finalPhone,
-                                        initialEmergencyName = eName,
-                                        initialEmergencyPhone = ePhone
-                                    )
-                                    
-                                    // ── Sync Registry Data to Server on Register ──
-                                    try {
-                                        api.syncUserData(com.team404.dualshield.api.SyncRequest(
-                                            phone = finalPhone,
-                                            name = finalName,
-                                            contacts = UserSession.getContactsList(context)
-                                        ))
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("RegisterSync", "Initial sync failed: ${e.message}")
-                                    }
-                                    
-                                    onLoginSuccess()
-                                } else {
-                                    errorMessage = "Registration Failed: Server returned an error (${resp.code()})."
+                            )
+                            if (resp.isSuccessful || resp.code() == 201 || resp.code() == 202) {
+                                val body = resp.body()
+                                UserSession.save(
+                                    context = context,
+                                    userId = body?.user_id ?: regPhone.trim(),
+                                    name = regName.trim(),
+                                    phone = regPhone.trim(),
+                                    initialEmergencyName = regEmergencyName.trim(),
+                                    initialEmergencyPhone = regEmergencyPhone.trim()
+                                )
+                                
+                                // Sync logic
+                                try {
+                                    api.syncUserData(com.team404.dualshield.api.SyncRequest(
+                                        phone = regPhone.trim(),
+                                        name = regName.trim(),
+                                        contacts = UserSession.getContactsList(context)
+                                    ))
+                                } catch (e: Exception) {
+                                    android.util.Log.e("AuthSync", "Sync failed: ${e.message}")
                                 }
-                            } catch (e: Exception) {
-                                errorMessage = "Connection Failure: Unable to transmit registry data. Check your internet."
-                            } finally {
-                                isLoading = false
+                                
+                                onLoginSuccess()
+                            } else {
+                                errorMessage = "Registry Error: Server returned ${resp.code()}. Please try again."
                             }
+                        } catch (e: Exception) {
+                            errorMessage = "Connectivity Fault: Unable to reach protection servers."
+                        } finally {
+                            isLoading = false
                         }
                     }
-                )
-            }
+                }
+            )
 
             if (errorMessage.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
