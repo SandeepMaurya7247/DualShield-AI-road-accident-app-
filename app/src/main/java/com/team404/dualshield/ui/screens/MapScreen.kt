@@ -231,28 +231,37 @@ fun MapScreen() {
         }
     }
 
+    // Centralized GPS Listener from Service
     DisposableEffect(hasLocationPermission) {
-        val locationCallback = object : LocationCallback() {
-            var isFirstUpdate = true
-            override fun onLocationResult(result: LocationResult) {
-                val location = result.lastLocation ?: return
-                userLat = location.latitude; userLng = location.longitude
-                speedKmh = (location.speed * 3.6).toInt().coerceAtLeast(0)
-                gpsReady = true
-                if (isFirstUpdate) {
-                    cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(location.latitude, location.longitude), 15f)
-                    isFirstUpdate = false
-                }
-                if (!isGoogleMapsAvailable) {
-                    webViewRef?.evaluateJavascript("updateLocation(${location.latitude}, ${location.longitude})", null)
+        var isFirstUpdate = true
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "com.team404.dualshield.LOCATION_UPDATE") {
+                    val lat = intent.getDoubleExtra("lat", 0.0)
+                    val lng = intent.getDoubleExtra("lng", 0.0)
+                    val speed = intent.getIntExtra("speed", 0)
+                    
+                    userLat = lat; userLng = lng
+                    speedKmh = speed
+                    gpsReady = true
+                    
+                    if (isFirstUpdate) {
+                        cameraPositionState.position = CameraPosition.fromLatLngZoom(LatLng(lat, lng), 15f)
+                        isFirstUpdate = false
+                    }
+                    if (!isGoogleMapsAvailable) {
+                        webViewRef?.evaluateJavascript("updateLocation($lat, $lng)", null)
+                    }
                 }
             }
         }
         if (hasLocationPermission) {
-            val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000L).build()
-            try { fusedLocationClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper()) } catch (e: Exception) {}
+            val filter = IntentFilter("com.team404.dualshield.LOCATION_UPDATE")
+            LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
         }
-        onDispose { fusedLocationClient.removeLocationUpdates(locationCallback) }
+        onDispose { 
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
+        }
     }
 
     LaunchedEffect(Unit) {

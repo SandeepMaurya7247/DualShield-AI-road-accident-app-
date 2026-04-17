@@ -255,10 +255,22 @@ class SensorMonitoringService : Service(), SensorEventListener {
             override fun onLocationResult(result: LocationResult) {
                 val location = result.lastLocation ?: return
                 currentSpeedKmh = (location.speed * 3.6).toInt().coerceAtLeast(0).toFloat()
+                
+                // Broadcast for UI sync
+                val intent = Intent("com.team404.dualshield.LOCATION_UPDATE").apply {
+                    putExtra("lat", location.latitude)
+                    putExtra("lng", location.longitude)
+                    putExtra("speed", currentSpeedKmh.toInt())
+                }
+                LocalBroadcastManager.getInstance(this@SensorMonitoringService).sendBroadcast(intent)
+                
                 checkRiskZones(location)
             }
         }
-        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L).build()
+        // Set to 1000ms (1 second) for real-time responsiveness
+        val req = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L)
+            .setMinUpdateIntervalMillis(500L)
+            .build()
         try {
             fusedLocationClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper())
         } catch (e: SecurityException) {

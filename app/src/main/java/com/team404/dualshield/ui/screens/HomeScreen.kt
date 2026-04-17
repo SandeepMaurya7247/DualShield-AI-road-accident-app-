@@ -43,6 +43,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.team404.dualshield.ai.SpeechAssistantManager
 import android.util.Log
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
@@ -84,23 +88,22 @@ fun HomeScreen(
         position = CameraPosition.fromLatLngZoom(LatLng(23.2599, 77.4126), 15f)
     }
 
-    // GPS Listener
+    // Centralized GPS Listener from Service
     DisposableEffect(Unit) {
-        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val listener = object : LocationListener {
-            override fun onLocationChanged(loc: Location) {
-                gpsLat = loc.latitude
-                gpsLng = loc.longitude
-                gpsSpeed = (loc.speed * 3.6).toInt().coerceAtLeast(0)
-                gpsAccuracy = if (loc.accuracy < 10) "High" else if (loc.accuracy < 30) "Medium" else "Low"
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == "com.team404.dualshield.LOCATION_UPDATE") {
+                    gpsLat = intent.getDoubleExtra("lat", 0.0)
+                    gpsLng = intent.getDoubleExtra("lng", 0.0)
+                    gpsSpeed = intent.getIntExtra("speed", 0)
+                    gpsAccuracy = "High" // Service uses PRIORITY_HIGH_ACCURACY
+                }
             }
         }
-        try {
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 2f, listener)
-            lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 2f, listener)
-        } catch (e: SecurityException) { }
+        val filter = IntentFilter("com.team404.dualshield.LOCATION_UPDATE")
+        LocalBroadcastManager.getInstance(context).registerReceiver(receiver, filter)
         onDispose { 
-            lm.removeUpdates(listener)
+            LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver)
             assistantManager.stop()
         }
     }
@@ -209,7 +212,7 @@ fun HomeScreen(
         ) {
             // Top Bar
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -219,7 +222,7 @@ fun HomeScreen(
                         contentDescription = "DualShield Logo",
                         modifier = Modifier.size(50.dp)
                     )
-                    Spacer(modifier = Modifier.width(-1.dp))
+                    Spacer(modifier = Modifier.width(-2.dp))
                     Text(
                         "DualShield AI", 
                         color = MaterialTheme.colorScheme.onBackground, 
