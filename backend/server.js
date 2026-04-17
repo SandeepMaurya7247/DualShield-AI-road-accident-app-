@@ -109,6 +109,21 @@ app.get('/health', (req, res) => {
     });
 });
 
+// ── ANTIGRAVITY HEARTBEAT (ANTI-SLEEP) ──
+// This ensures the Render free tier doesn't sleep by pinging itself every 10 minutes.
+if (process.env.NODE_ENV === 'production') {
+    const APP_URL = 'https://dualshield-backend.onrender.com';
+    setInterval(async () => {
+        try {
+            const response = await fetch(`${APP_URL}/health`);
+            const data = await response.json();
+            console.log(`[ANTIGRAVITY] Self-Wake Success: ${data.status} at ${new Date().toISOString()}`);
+        } catch (e) {
+            console.error(`[ANTIGRAVITY] Self-Wake Failed: ${e.message}`);
+        }
+    }, 600000); // 10 minutes
+}
+
 // ── Auth ──
 app.post('/api/users/register', async (req, res) => {
     try {
