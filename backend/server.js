@@ -4,6 +4,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
+const localtunnel = require('localtunnel');
 
 const app = express();
 app.use(cors());
@@ -63,6 +64,12 @@ const incidentSchema = new mongoose.Schema({
     latitude: Number,
     longitude: Number,
     severityLevel: Number,
+    accelX: Number,
+    accelY: Number,
+    accelZ: Number,
+    gyroX: Number,
+    gyroY: Number,
+    gyroZ: Number,
     timestamp: Number,
     received_at: String
 });
@@ -156,6 +163,45 @@ app.post('/api/users/login', async (req, res) => {
     }
 });
 
+app.post('/api/users/sync', async (req, res) => {
+    try {
+        const { phone, name, contacts } = req.body;
+        console.log(`[SYNC] Request for ${phone} - Name: ${name}, Contacts: ${contacts?.length || 0}`);
+        
+        if (!phone) return res.status(400).json({ error: 'phone is required' });
+
+        if (isDbConnected) {
+            const updateData = { phone };
+            if (name) updateData.name = name;
+            if (contacts && Array.isArray(contacts)) {
+                updateData.emergency_contacts = contacts.map(c => ({
+                    contact_name: c.contact_name,
+                    contact_phone: c.contact_phone,
+                    relation: c.relation || 'Family'
+                }));
+            }
+
+            const user = await User.findOneAndUpdate(
+                { phone },
+                { $set: updateData },
+                { new: true, upsert: true }
+            );
+            res.status(200).json({ status: 'success', user_id: user._id, name: user.name, phone: user.phone });
+        } else {
+            fallbackStore.users[phone] = { 
+                phone, 
+                name: name || fallbackStore.users[phone]?.name || "User",
+            };
+            if (contacts) fallbackStore.contacts[phone] = contacts;
+            saveFallbackStore();
+            res.status(200).json({ status: 'success', user_id: phone, name, phone });
+        }
+    } catch (e) {
+        console.error("[SYNC] Error:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ── Incidents ──
 app.post('/api/incidents', async (req, res) => {
     try {
@@ -163,7 +209,8 @@ app.post('/api/incidents', async (req, res) => {
         if (!data) return res.status(400).json({ error: 'No data provided' });
         data.received_at = new Date().toISOString();
         
-        console.log(`CRASH: User ${data.userId} at (${data.latitude}, ${data.longitude})`);
+        console.log(`🚨 CRASH REPORT: User ${data.userId} at (${data.latitude}, ${data.longitude})`);
+        console.log(`📊 TELEMETRY: Accel(${data.accelX}, ${data.accelY}, ${data.accelZ}) Gyro(${data.gyroX}, ${data.gyroY}, ${data.gyroZ})`);
         
         let iid = Date.now().toString();
         if (isDbConnected) {
@@ -185,8 +232,11 @@ app.post('/api/incidents', async (req, res) => {
 app.get('/api/incidents', async (req, res) => {
     try {
         let result = [];
+        const { userId } = req.query;
+        const filter = userId ? { userId } : {};
+
         if (isDbConnected) {
-            const docs = await Incident.find().sort({ timestamp: -1 }).limit(20);
+            const docs = await Incident.find(filter).sort({ timestamp: -1 }).limit(20);
             result = docs.map(doc => ({
                 id: doc._id,
                 userId: doc.userId || 'unknown',
@@ -197,7 +247,11 @@ app.get('/api/incidents', async (req, res) => {
                 received_at: doc.received_at || ''
             }));
         } else {
-            const list = [...fallbackStore.incidents].sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+            let list = [...fallbackStore.incidents];
+            if (userId) {
+                list = list.filter(inc => inc.userId === userId);
+            }
+            list.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
             result = list.slice(0, 20).map(doc => ({
                 id: doc._id,
                 userId: doc.userId || 'unknown',
@@ -263,7 +317,9 @@ app.get('/api/geofences/accident-zones', async (req, res) => {
   {"name":"Royal Market","lat":23.2550,"lng":77.4100,"radius":200,"risk":"High"},
   {"name":"Peer Gate","lat":23.2500,"lng":77.4050,"radius":200,"risk":"Very High"},
   {"name":"Itwara","lat":23.2700,"lng":77.4100,"radius":200,"risk":"High"},
-  {"name":"Budhwara","lat":23.2650,"lng":77.4150,"radius":200,"risk":"High"}
+  {"name":"Budhwara","lat":23.2650,"lng":77.4150,"radius":200,"risk":"High"},
+  {"name":"Ratibadh point1","lat":23.16362446010636,"lng":77.31342717434326,"radius":100,"risk":"High"},
+  {"name":"Ratibadh point2","lat":23.155614706253573,"lng": 77.29947968751591,"radius":100,"risk":"High"}
             ];
         }
         res.status(200).json(zones);
@@ -349,6 +405,26 @@ app.delete('/api/users/:phone/contacts/:contactPhone', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Node.js Backend server running on http://0.0.0.0:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`🚀 Sentinel Backend active on http://0.0.0.0:${PORT}`);
+    
+    // ── AUTOMATED TUNNEL INITIALIZATION (Development Only) ──
+    if (process.env.NODE_ENV !== 'production') {
+        try {
+            const tunnel = await localtunnel({ 
+                port: PORT, 
+                subdomain: 'dual-shield-safe' 
+            });
+            
+            console.log(`📡 Sentinel Tunnel Active: ${tunnel.url}`);
+            
+            tunnel.on('close', () => {
+                console.log('⚠️ Sentinel Tunnel Closed');
+            });
+        } catch (err) {
+            console.log('❌ Sentinel Tunnel Failed:', err.message);
+        }
+    } else {
+        console.log('🌐 Running in PRODUCTION mode - LocalTunnel disabled.');
+    }
 });

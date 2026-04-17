@@ -154,7 +154,7 @@ class SensorMonitoringService : Service(), SensorEventListener {
 
                 if (isCrash && !sosActive) {
                     sosActive = true
-                    triggerEmergencyProtocol()
+                    triggerEmergencyProtocol(accX, accY, accZ, currentGyroX, currentGyroY, currentGyroZ)
                     // Reset flag after 45 seconds as a safety backup
                     serviceScope.launch {
                         kotlinx.coroutines.delay(45_000L)
@@ -165,11 +165,17 @@ class SensorMonitoringService : Service(), SensorEventListener {
         }
     }
 
-    private fun triggerEmergencyProtocol() {
-        Log.w("DualShield", "🚨 CRASH DETECTED! Triggering Protocol")
+    private fun triggerEmergencyProtocol(ax: Float, ay: Float, az: Float, gx: Float, gy: Float, gz: Float) {
+        Log.w("DualShield", "🚨 CRASH DETECTED! Telemetry: Accel($ax, $ay, $az) Gyro($gx, $gy, $gz)")
 
         // 1. Create intent for the Emergency Activity
         val emergencyIntent = Intent(this, com.team404.dualshield.emergency.EmergencyActivity::class.java).apply {
+            putExtra("accel_x", ax)
+            putExtra("accel_y", ay)
+            putExtra("accel_z", az)
+            putExtra("gyro_x", gx)
+            putExtra("gyro_y", gy)
+            putExtra("gyro_z", gz)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
                      Intent.FLAG_ACTIVITY_CLEAR_TOP or 
                      Intent.FLAG_ACTIVITY_SINGLE_TOP or

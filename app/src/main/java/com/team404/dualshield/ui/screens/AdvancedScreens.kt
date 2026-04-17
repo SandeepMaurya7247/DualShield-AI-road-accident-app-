@@ -242,21 +242,27 @@ fun SensorCard(label: String, value: Float, unit: String, color: Color) {
 }
 
 // ── 3. History Screen ────────────────────────────────────────────────────────
-@OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
     val api = remember { BackendApi.create() }
     var incidents by remember { mutableStateOf<List<IncidentItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    
+    val userPhone = remember { com.team404.dualshield.api.UserSession.getPhone(context) }
 
     LaunchedEffect(Unit) {
         isLoading = true
         scope.launch {
             try {
-                val resp = api.getIncidents()
+                // Fetch incidents only for this user
+                val resp = api.getIncidents(userId = if (userPhone.isNotBlank()) userPhone else null)
                 incidents = resp.body() ?: emptyList()
-            } catch (e: Exception) { }
+            } catch (e: Exception) { 
+                android.util.Log.e("HistoryScreen", "Fetch failed: ${e.message}")
+            }
             finally { isLoading = false }
         }
     }

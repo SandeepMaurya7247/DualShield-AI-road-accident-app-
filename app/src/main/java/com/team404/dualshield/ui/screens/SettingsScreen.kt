@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.team404.dualshield.api.UserSession
 import com.team404.dualshield.ui.theme.*
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,11 +150,14 @@ fun SettingsScreen(
                             shadowElevation = 10.dp
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.Person, 
-                                    contentDescription = null, 
-                                    tint = sentinelBlue.copy(0.9f), 
-                                    modifier = Modifier.size(70.dp)
+                                Text(
+                                    text = userName.take(1).uppercase(),
+                                    style = MaterialTheme.typography.headlineLarge.copy(
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 60.sp,
+                                        color = sentinelBlue.copy(alpha = 0.9f),
+                                        letterSpacing = 0.sp
+                                    )
                                 )
                                 
                                 // Integrated HUD Status Dot (Bottom-Right)
@@ -208,6 +212,36 @@ fun SettingsScreen(
                         icon = Icons.Default.Shield, 
                         title = "Emergency SOS Guardian", 
                         onClick = onNavigateToContacts
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outline.copy(0.05f), thickness = 1.dp, modifier = Modifier.padding(horizontal = 24.dp))
+                    
+                    var isSyncing by remember { mutableStateOf(false) }
+                    val scope = rememberCoroutineScope()
+                    val api = remember { com.team404.dualshield.api.BackendApi.create() }
+
+                    ProfileItem(
+                        icon = Icons.Default.Sync,
+                        title = if (isSyncing) "Syncing..." else "Sync Profile with Server",
+                        subtitle = "Backup contacts and info to cloud",
+                        onClick = {
+                            if (!isSyncing) {
+                                isSyncing = true
+                                scope.launch {
+                                    try {
+                                        api.syncUserData(com.team404.dualshield.api.SyncRequest(
+                                            phone = userPhone,
+                                            name = userName,
+                                            contacts = UserSession.getContactsList(context)
+                                        ))
+                                        android.util.Log.d("SettingsSync", "Manual sync success")
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SettingsSync", "Manual sync fail: ${e.message}")
+                                    } finally {
+                                        isSyncing = false
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
 

@@ -22,11 +22,23 @@ data class ContactRequest(
     val relation: String = "Family"
 )
 
+data class SyncRequest(
+    val phone: String,
+    val name: String,
+    val contacts: List<ContactItem>
+)
+
 data class IncidentReport(
     val userId: String,
     val latitude: Double,
     val longitude: Double,
     val severityLevel: Int,
+    val accelX: Float = 0f,
+    val accelY: Float = 0f,
+    val accelZ: Float = 0f,
+    val gyroX: Float = 0f,
+    val gyroY: Float = 0f,
+    val gyroZ: Float = 0f,
     val timestamp: Long
 )
 
@@ -52,6 +64,12 @@ data class IncidentItem(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val severityLevel: Int = 1,
+    val accelX: Float = 0f,
+    val accelY: Float = 0f,
+    val accelZ: Float = 0f,
+    val gyroX: Float = 0f,
+    val gyroY: Float = 0f,
+    val gyroZ: Float = 0f,
     val timestamp: Long = 0L,
     val received_at: String = ""
 )
@@ -92,7 +110,7 @@ interface BackendApi {
     suspend fun reportIncident(@Body report: IncidentReport): Response<IncidentResponse>
 
     @GET("api/incidents")
-    suspend fun getIncidents(): Response<List<IncidentItem>>
+    suspend fun getIncidents(@Query("userId") userId: String? = null): Response<List<IncidentItem>>
 
     // Geofences
     @GET("api/geofences/accident-zones")
@@ -112,13 +130,22 @@ interface BackendApi {
     @GET("health")
     suspend fun healthCheck(): Response<HealthResponse>
 
+    @POST("api/users/sync")
+    suspend fun syncUserData(@Body request: SyncRequest): Response<AuthResponse>
+
     companion object {
         private const val BASE_URL = "https://dual-shield-safe.loca.lt/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()
-                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .addHeader("bypass-tunnel-reminder", "true")
+                        .build()
+                    chain.proceed(request)
+                }
                 .build()
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)

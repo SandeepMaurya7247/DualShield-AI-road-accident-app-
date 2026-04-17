@@ -56,6 +56,16 @@ object UserSession {
         return prefs(context).getString(KEY_CONTACTS, "[]") ?: "[]"
     }
 
+    fun getContactsList(context: Context): List<ContactItem> {
+        val json = getContactsLocal(context)
+        return try {
+            val listType = object : com.google.gson.reflect.TypeToken<List<ContactItem>>() {}.type
+            com.google.gson.Gson().fromJson(json, listType) ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun saveThemeMode(context: Context, mode: String) {
         prefs(context).edit().putString(KEY_THEME_MODE, mode).apply()
     }

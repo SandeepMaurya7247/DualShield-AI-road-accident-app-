@@ -214,11 +214,19 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Shield, contentDescription = null, tint = AccentBlueLight)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text("DualShield AI", color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = (-0.5).sp)
-                    }
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(id = com.team404.dualshield.R.drawable.logo),
+                        contentDescription = "DualShield Logo",
+                        modifier = Modifier.size(50.dp)
+                    )
+                    Spacer(modifier = Modifier.width(-1.dp))
+                    Text(
+                        "DualShield AI", 
+                        color = MaterialTheme.colorScheme.onBackground, 
+                        fontWeight = FontWeight.Black, 
+                        fontSize = 22.sp, 
+                        letterSpacing = (-1).sp
+                    )
                 }
                 BackendStatusChip(backendOnline)
             }
@@ -248,19 +256,19 @@ fun HomeScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            Icons.Default.Security, 
-                            contentDescription = null, 
-                            tint = sentinelGreen, 
-                            modifier = Modifier.size(36.dp)
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.team404.dualshield.R.drawable.logo),
+                            contentDescription = "DualShield Logo",
+                            modifier = Modifier.size(44.dp)
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(0.dp))
                         Text(
                             "SENTINEL", 
                             color = sentinelGreen, 
                             fontSize = 11.sp, 
                             fontWeight = FontWeight.Black, 
-                            letterSpacing = 2.sp
+                            letterSpacing = 1.sp,
+                            modifier = Modifier.offset(y = (-4).dp)
                         )
                         Text(
                             "ACTIVE", 

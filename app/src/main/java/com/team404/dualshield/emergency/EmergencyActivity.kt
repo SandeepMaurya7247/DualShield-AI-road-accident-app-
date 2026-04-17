@@ -123,6 +123,12 @@ class EmergencyActivity : ComponentActivity() {
                 EmergencyCountdownScreen(
                     userPhone = userPhone,
                     userId = userId,
+                    ax = intent.getFloatExtra("accel_x", 0f),
+                    ay = intent.getFloatExtra("accel_y", 0f),
+                    az = intent.getFloatExtra("accel_z", 0f),
+                    gx = intent.getFloatExtra("gyro_x", 0f),
+                    gy = intent.getFloatExtra("gyro_y", 0f),
+                    gz = intent.getFloatExtra("gyro_z", 0f),
                     onFinish = { 
                         stopAllService()
                         finish() 
@@ -238,6 +244,12 @@ class EmergencyActivity : ComponentActivity() {
 fun EmergencyCountdownScreen(
     userPhone: String,
     userId: String,
+    ax: Float = 0f,
+    ay: Float = 0f,
+    az: Float = 0f,
+    gx: Float = 0f,
+    gy: Float = 0f,
+    gz: Float = 0f,
     onFinish: () -> Unit
 ) {
     val context = LocalContext.current
@@ -285,7 +297,7 @@ fun EmergencyCountdownScreen(
             statusText = "Sending SOS..."
             val phones = contacts.map { it.contact_phone.trim() }.filter { it.isNotBlank() }.distinct()
             val em = com.team404.dualshield.emergency.EmergencyManager(context)
-            em.dispatchSOS(phones, userId)
+            em.dispatchSOS(phones, userId, ax, ay, az, gx, gy, gz)
             delay(3000L)
             onFinish()
         }

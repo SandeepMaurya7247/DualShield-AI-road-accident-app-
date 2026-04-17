@@ -96,13 +96,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 topLeft = Offset(size.width - 300f, size.height - 300f),
                 size = androidx.compose.ui.geometry.Size(500f, 500f)
             )
-            // Decorative ring
-            drawCircle(
-                color = AccentBlueLight.copy(alpha = 0.04f),
-                radius = 300f,
-                center = Offset(size.width / 2, size.height / 2),
-                style = Stroke(width = 60f, cap = StrokeCap.Round)
-            )
         }
 
         Column(
@@ -115,30 +108,11 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Spacer(modifier = Modifier.height(56.dp))
 
             // ── Sentinel Brand Header ────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .background(
-                        Brush.radialGradient(colors = listOf(sentinelBlue.copy(0.2f), Color.Transparent)),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(MaterialTheme.colorScheme.surface, CircleShape)
-                        .border(1.dp, Brush.linearGradient(listOf(sentinelBlue, sentinelGreen)), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = sentinelBlue,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.team404.dualshield.R.drawable.logo),
+                contentDescription = "DualShield Logo",
+                modifier = Modifier.size(150.dp)
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -247,7 +221,20 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 if (resp.isSuccessful) {
                                     val body = resp.body()
                                     if (body != null && body.status == "success") {
-                                        UserSession.save(context, body.user_id ?: "uid", body.name ?: "User", loginPhone.trim())
+                                        val finalName = body.name ?: "User"
+                                        UserSession.save(context, body.user_id ?: "uid", finalName, loginPhone.trim())
+                                        
+                                        // ── Sync All Data to Server ──
+                                        try {
+                                            api.syncUserData(com.team404.dualshield.api.SyncRequest(
+                                                phone = loginPhone.trim(),
+                                                name = finalName,
+                                                contacts = UserSession.getContactsList(context)
+                                            ))
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("LoginSync", "Sync failed: ${e.message}")
+                                        }
+                                        
                                         onLoginSuccess()
                                     } else {
                                         errorMessage = "Phone not registered. Please register first."
@@ -255,14 +242,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 } else if (resp.code() == 404) {
                                     errorMessage = "Phone not registered. Please register first."
                                 } else {
-                                    // Server offline – allow demo login
-                                    UserSession.save(context, "demo_user", "Demo User", loginPhone.trim())
-                                    onLoginSuccess()
+                                    errorMessage = "Mission Control is unreachable (Error Code: ${resp.code()}). Please check your connection."
                                 }
                             } catch (e: Exception) {
-                                // Network unavailable – allow demo login
-                                UserSession.save(context, "demo_user", "Demo User", loginPhone.trim())
-                                onLoginSuccess()
+                                errorMessage = "Network Fault: Unable to reach the Registry. Ensure your server is active."
                             } finally {
                                 isLoading = false
                             }
@@ -354,15 +337,27 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                 )
                                 if (resp.isSuccessful || resp.code() == 202) {
                                     val body = resp.body()
-                                    UserSession.save(context, body?.user_id ?: "uid", regName.trim(), regPhone.trim())
+                                    val finalName = regName.trim()
+                                    val finalPhone = regPhone.trim()
+                                    UserSession.save(context, body?.user_id ?: "uid", finalName, finalPhone)
+                                    
+                                    // ── Sync Registry Data to Server on Register ──
+                                    try {
+                                        api.syncUserData(com.team404.dualshield.api.SyncRequest(
+                                            phone = finalPhone,
+                                            name = finalName,
+                                            contacts = UserSession.getContactsList(context)
+                                        ))
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("RegisterSync", "Initial sync failed: ${e.message}")
+                                    }
+                                    
                                     onLoginSuccess()
                                 } else {
-                                    errorMessage = "Registration failed. Try again."
+                                    errorMessage = "Registration Failed: Server returned an error (${resp.code()})."
                                 }
                             } catch (e: Exception) {
-                                // Network unavailable — demo register
-                                UserSession.save(context, "demo_user", regName.trim(), regPhone.trim())
-                                onLoginSuccess()
+                                errorMessage = "Connection Failure: Unable to transmit registry data. Check your internet."
                             } finally {
                                 isLoading = false
                             }

@@ -31,5 +31,7 @@
   {"name":"Royal Market","lat":23.2550,"lng":77.4100,"radius":300,"risk":"High"},
   {"name":"Peer Gate","lat":23.2500,"lng":77.4050,"radius":300,"risk":"Very High"},
   {"name":"Itwara","lat":23.2700,"lng":77.4100,"radius":300,"risk":"High"},
-  {"name":"Budhwara","lat":23.2650,"lng":77.4150,"radius":300,"risk":"High"}
+  {"name":"Budhwara","lat":23.2650,"lng":77.4150,"radius":300,"risk":"High"},
+  {"name":"Ratibadh point1","lat":23.16362446010636,"lng":77.31342717434326,"radius":300,"risk":"Very High"},
+  {"name":"Ratibadh point2","lat":23.155614706253573,"lng": 77.29947968751591,"radius":300,"risk":"Very High"}
 ]

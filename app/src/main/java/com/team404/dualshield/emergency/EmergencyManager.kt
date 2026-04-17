@@ -32,7 +32,16 @@ class EmergencyManager(private val context: Context) {
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private val api = BackendApi.create()
 
-    suspend fun dispatchSOS(contactPhones: List<String>, userId: String) {
+    suspend fun dispatchSOS(
+        contactPhones: List<String>, 
+        userId: String,
+        ax: Float = 0f,
+        ay: Float = 0f,
+        az: Float = 0f,
+        gx: Float = 0f,
+        gy: Float = 0f,
+        gz: Float = 0f
+    ) {
         if (!com.team404.dualshield.api.UserSession.isEmergencyAlertsEnabled(context)) {
             Log.d("EmergencyManager", "SOS Dispatch aborted: Emergency Alerts are DISABLED in settings.")
             return
@@ -52,25 +61,39 @@ class EmergencyManager(private val context: Context) {
             val location = getLastKnownLocation()
             val (lat, lng) = if (location != null) Pair(location.latitude, location.longitude) else Pair(28.6139, 77.2090)
             
-            // 1. Report to Backend
-            if (com.team404.dualshield.api.UserSession.isBackendSyncEnabled(context)) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        api.reportIncident(
-                            IncidentReport(
-                                userId = userId,
-                                latitude = lat,
-                                longitude = lng,
-                                severityLevel = 3,
-                                timestamp = System.currentTimeMillis()
-                            )
-                        )
-                    } catch (e: Exception) {
-                        Log.e("EmergencyManager", "Backend report failed: ${e.message}")
+            // 1. Report to Backend (Mandatory for History, ignores Sync setting)
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val reportUserId = if (userId.isNullOrBlank() || userId == "unknown") {
+                        com.team404.dualshield.api.UserSession.getPhone(context)
+                    } else {
+                        userId
                     }
+                    
+                    Log.d("EmergencyManager", "Reporting incident for user: $reportUserId")
+                    val response = api.reportIncident(
+                        IncidentReport(
+                            userId = reportUserId,
+                            latitude = lat,
+                            longitude = lng,
+                            severityLevel = 3,
+                            accelX = ax,
+                            accelY = ay,
+                            accelZ = az,
+                            gyroX = gx,
+                            gyroY = gy,
+                            gyroZ = gz,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    if (response.isSuccessful) {
+                        Log.d("EmergencyManager", "Backend report SUCCESS: ${response.body()?.incident_id}")
+                    } else {
+                        Log.e("EmergencyManager", "Backend report FAILED: ${response.errorBody()?.string()}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("EmergencyManager", "Backend report exception: ${e.message}")
                 }
-            } else {
-                Log.d("EmergencyManager", "Backend Sync disabled. Skipping cloud report.")
             }
 
             // 2. Send SMS
