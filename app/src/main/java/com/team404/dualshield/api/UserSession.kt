@@ -85,6 +85,29 @@ object UserSession {
         prefs(context).edit().putString(KEY_NAME, newName).apply()
     }
 
+    fun updateProfile(context: Context, newName: String, emergencyName: String, emergencyPhone: String) {
+        val editor = prefs(context).edit()
+            .putString(KEY_NAME, newName)
+        
+        if (emergencyName.isNotBlank() && emergencyPhone.isNotBlank()) {
+            val contact = ContactItem(
+                contact_name = emergencyName,
+                contact_phone = emergencyPhone,
+                relation = "Emergency"
+            )
+            // Get current contacts and update/replace the first one
+            val currentList = getContactsList(context).toMutableList()
+            if (currentList.isNotEmpty()) {
+                currentList[0] = contact
+            } else {
+                currentList.add(contact)
+            }
+            val json = com.google.gson.Gson().toJson(currentList)
+            editor.putString(KEY_CONTACTS, json)
+        }
+        editor.apply()
+    }
+
     fun getThemeMode(context: Context): String {
         return prefs(context).getString(KEY_THEME_MODE, "SYSTEM") ?: "SYSTEM"
     }

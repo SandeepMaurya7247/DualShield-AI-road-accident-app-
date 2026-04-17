@@ -95,34 +95,27 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Spacer(modifier = Modifier.height(56.dp))
 
             // ── Sentinel Brand Header ────────────────────────────────────
             androidx.compose.foundation.Image(
                 painter = androidx.compose.ui.res.painterResource(id = com.team404.dualshield.R.drawable.logo),
                 contentDescription = "DualShield Logo",
-                modifier = Modifier.size(150.dp)
+                modifier = Modifier.size(160.dp)
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 "DualShield AI",
                 color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-            Text(
-                "Your Guardian on the Road",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.sp,
+                modifier = Modifier.offset(y = (-30).dp) // Ultra-tight alignment with logo
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(0.dp))
 
             // ── Unified Registration Form ────────────────────────────────
             Text("Protective Profile", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
@@ -243,19 +236,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Footer
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(100.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(14.dp))
-                Text("End-to-end encrypted  •  Your data stays private", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-            }
-
+            // Footer removed for simplicity as per user's recent edits
+            Spacer(modifier = Modifier.height(16.dp))
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

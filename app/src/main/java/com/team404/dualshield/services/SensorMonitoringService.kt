@@ -306,8 +306,8 @@ class SensorMonitoringService : Service(), SensorEventListener {
     private fun triggerVoiceWarning() {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastAlertTime > 15000L) { // 15 second cooldown for background
-            Log.w("DualShield", "🔊 TRIGGERING VOICE WARNING: Dheere chaliye...")
-            speechAssistant?.speakText("Dheere chaliye, high risk zone hai")
+            Log.w("DualShield", "🔊 TRIGGERING VOICE WARNING: drive slowly...")
+            speechAssistant?.speakText("You are entering a high risk zone, please drive slowly")
             lastAlertTime = currentTime
         }
     }

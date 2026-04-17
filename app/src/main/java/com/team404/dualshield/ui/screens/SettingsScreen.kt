@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.team404.dualshield.api.UserSession
+import com.team404.dualshield.api.ContactItem
 import com.team404.dualshield.ui.theme.*
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -44,21 +45,50 @@ fun SettingsScreen(
     val bgColor = MaterialTheme.colorScheme.background
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
     var showInfoDialog by remember { mutableStateOf(false) }
+    
+    val contactsList = UserSession.getContactsList(context)
+    val initialEmergency = contactsList.firstOrNull() ?: ContactItem("Emergency", "", "Guardian")
+
     var editedName by remember { mutableStateOf(userName) }
+    var editedEmergName by remember { mutableStateOf(initialEmergency.contact_name) }
+    var editedEmergPhone by remember { mutableStateOf(initialEmergency.contact_phone) }
 
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("MISSION PROFILE", fontWeight = FontWeight.Black, fontSize = 18.sp, color = sentinelGreen) },
+            title = { Text("MISSION PROFILE", fontWeight = FontWeight.Black, fontSize = 20.sp, color = sentinelGreen) },
             text = {
-                Column {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
                     Text("REGISTRY ID: ${userPhone}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text("PERSONAL ALIAS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = sentinelGreen)
                     OutlinedTextField(
                         value = editedName,
                         onValueChange = { editedName = it },
-                        label = { Text("Sentinel Alias") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = sentinelGreen)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("EMERGENCY GUARDIAN", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = sentinelGreen)
+                    OutlinedTextField(
+                        value = editedEmergName,
+                        onValueChange = { editedEmergName = it },
+                        label = { Text("Guardian Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = sentinelGreen)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editedEmergPhone,
+                        onValueChange = { editedEmergPhone = it },
+                        label = { Text("Emergency Contact Number") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = sentinelGreen)
@@ -68,8 +98,31 @@ fun SettingsScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        UserSession.updateName(context, editedName)
-                        showInfoDialog = false
+                        scope.launch {
+                            try {
+                                val api = com.team404.dualshield.api.BackendApi.create()
+                                val response = api.updateProfile(
+                                    com.team404.dualshield.api.ProfileUpdateRequest(
+                                        name = editedName,
+                                        phone = userPhone,
+                                        emergency_name = editedEmergName,
+                                        emergency_phone = editedEmergPhone
+                                    )
+                                )
+                                if (response.isSuccessful) {
+                                    UserSession.updateProfile(context, editedName, editedEmergName, editedEmergPhone)
+                                    showInfoDialog = false
+                                } else {
+                                    // Fallback to local only update if backend fails
+                                    UserSession.updateProfile(context, editedName, editedEmergName, editedEmergPhone)
+                                    showInfoDialog = false
+                                }
+                            } catch (e: Exception) {
+                                // Fallback
+                                UserSession.updateProfile(context, editedName, editedEmergName, editedEmergPhone)
+                                showInfoDialog = false
+                            }
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = sentinelGreen)
                 ) {

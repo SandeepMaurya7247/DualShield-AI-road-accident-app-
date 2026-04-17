@@ -168,6 +168,48 @@ app.post('/api/users/register', async (req, res) => {
     }
 });
 
+app.post('/api/users/update-profile', async (req, res) => {
+    try {
+        const { phone, name, emergency_name, emergency_phone } = req.body;
+        console.log(`[PROFILE] Update request: ${phone} -> Name: ${name}`);
+        
+        if (!phone) return res.status(400).json({ error: 'phone is required' });
+
+        if (isDbConnected) {
+            const updatePayload = { name: name };
+            if (emergency_name || emergency_phone) {
+                // Update or create the first emergency contact
+                await User.findOneAndUpdate(
+                    { phone: phone },
+                    { 
+                        $set: { 
+                            name: name,
+                            "emergency_contacts.0": {
+                                contact_name: emergency_name || "Emergency",
+                                contact_phone: emergency_phone || "",
+                                relation: "Guardian"
+                            }
+                        } 
+                    },
+                    { upsert: true }
+                );
+            } else {
+                await User.findOneAndUpdate({ phone: phone }, { $set: { name: name } });
+            }
+        } else {
+            if (fallbackStore.users[phone]) {
+                fallbackStore.users[phone].name = name;
+                fallbackStore.users[phone].emergency_name = emergency_name;
+                fallbackStore.users[phone].emergency_phone = emergency_phone;
+                saveFallbackStore();
+            }
+        }
+        res.status(200).json({ status: 'success', message: 'Profile updated' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/users/login', async (req, res) => {
     try {
         const phone = (req.body.phone || '').trim();

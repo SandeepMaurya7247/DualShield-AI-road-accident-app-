@@ -15,6 +15,12 @@ data class RegisterRequest(
 )
 
 data class LoginRequest(val phone: String)
+data class ProfileUpdateRequest(
+    val name: String,
+    val phone: String,
+    val emergency_name: String,
+    val emergency_phone: String
+)
 
 data class ContactRequest(
     val contact_name: String,
@@ -107,6 +113,9 @@ interface BackendApi {
     @POST("api/users/login")
     suspend fun loginUser(@Body req: LoginRequest): Response<AuthResponse>
 
+    @POST("api/users/update-profile")
+    suspend fun updateProfile(@Body req: ProfileUpdateRequest): Response<Map<String, String>>
+
     // Incidents
     @POST("api/incidents")
     suspend fun reportIncident(@Body report: IncidentReport): Response<IncidentResponse>
@@ -139,7 +148,7 @@ interface BackendApi {
     suspend fun syncUserData(@Body request: SyncRequest): Response<AuthResponse>
 
     companion object {
-        private const val BASE_URL = "https://dualshield-live-v3.loca.lt/"
+        private const val BASE_URL = "https://dualshield-backend.onrender.com/"
 
         fun create(): BackendApi {
             val client = okhttp3.OkHttpClient.Builder()
