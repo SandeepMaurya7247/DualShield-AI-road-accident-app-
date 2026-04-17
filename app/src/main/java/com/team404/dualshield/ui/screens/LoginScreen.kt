@@ -339,7 +339,17 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                                     val body = resp.body()
                                     val finalName = regName.trim()
                                     val finalPhone = regPhone.trim()
-                                    UserSession.save(context, body?.user_id ?: "uid", finalName, finalPhone)
+                                    val eName = regEmergencyName.trim()
+                                    val ePhone = regEmergencyPhone.trim()
+
+                                    UserSession.save(
+                                        context = context,
+                                        userId = body?.user_id ?: "uid",
+                                        name = finalName,
+                                        phone = finalPhone,
+                                        initialEmergencyName = eName,
+                                        initialEmergencyPhone = ePhone
+                                    )
                                     
                                     // ── Sync Registry Data to Server on Register ──
                                     try {

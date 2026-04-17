@@ -173,7 +173,7 @@ app.post('/api/users/sync', async (req, res) => {
         if (isDbConnected) {
             const updateData = { phone };
             if (name) updateData.name = name;
-            if (contacts && Array.isArray(contacts)) {
+            if (contacts && Array.isArray(contacts) && contacts.length > 0) {
                 updateData.emergency_contacts = contacts.map(c => ({
                     contact_name: c.contact_name,
                     contact_phone: c.contact_phone,

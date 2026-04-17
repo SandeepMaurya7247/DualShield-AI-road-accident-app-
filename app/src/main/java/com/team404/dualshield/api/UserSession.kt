@@ -21,13 +21,24 @@ object UserSession {
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
-    fun save(context: Context, userId: String, name: String, phone: String) {
-        prefs(context).edit()
+    fun save(context: Context, userId: String, name: String, phone: String, initialEmergencyName: String? = null, initialEmergencyPhone: String? = null) {
+        val editor = prefs(context).edit()
             .putString(KEY_USER_ID, userId)
             .putString(KEY_NAME, name)
             .putString(KEY_PHONE, phone)
             .putBoolean(KEY_LOGGED_IN, true)
-            .apply()
+
+        if (!initialEmergencyName.isNullOrBlank() && !initialEmergencyPhone.isNullOrBlank()) {
+            val contact = ContactItem(
+                contact_name = initialEmergencyName,
+                contact_phone = initialEmergencyPhone,
+                relation = "Emergency"
+            )
+            val json = com.google.gson.Gson().toJson(listOf(contact))
+            editor.putString(KEY_CONTACTS, json)
+        }
+
+        editor.apply()
     }
 
     fun isLoggedIn(context: Context): Boolean =
